@@ -1,0 +1,120 @@
+{
+    "_comment": "This is a comprehensive reference configuration file for the signal generator. All components are in a single 'components' list. The application will correctly place them in the UI.",
+    "components": [
+        {
+            "_comment": "Sine: A standard sine wave. Parameters: amplitude, frequency (Hz), phase (degrees).",
+            "type": "Sine",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 5.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "_comment": "Sine (Varying Freq): A sine wave that abruptly changes frequency at a specified time. Parameters: amplitude, start_freq (Hz), end_freq (Hz), change_time (s).",
+            "type": "Sine (Varying Freq)",
+            "params": {
+                "amplitude": 1.0,
+                "start_freq": 10.0,
+                "end_freq": 40.0,
+                "change_time": 1.0
+            }
+        },
+        {
+            "_comment": "Cosine: A standard cosine wave, which is a sine wave with a 90-degree phase shift. Parameters: amplitude, frequency (Hz), phase (degrees).",
+            "type": "Cosine",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 5.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "_comment": "Square: A square wave. Parameters: amplitude, frequency (Hz), phase (degrees), and duty_cycle (0.0 to 1.0, where 0.5 is a perfect square).",
+            "type": "Square",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 5.0,
+                "phase": 0.0,
+                "duty_cycle": 0.5
+            }
+        },
+        {
+            "_comment": "Chirp: A signal with a linearly increasing frequency over its duration. Parameters: amplitude, start_freq (Hz), end_freq (Hz).",
+            "type": "Chirp",
+            "params": {
+                "amplitude": 1.0,
+                "start_freq": 1.0,
+                "end_freq": 50.0
+            }
+        },
+        {
+            "_comment": "Gaussian Noise: Adds random noise from a normal distribution. std_dev controls power. The seed makes the noise pattern reproducible. Use the 'Regenerate' button for a new pattern.",
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 0.1,
+                "seed": 12345
+            }
+        },
+        {
+            "_comment": "Amplitude Jump: An instantaneous DC shift in the signal from a certain point onwards. Parameters: jump_size (can be positive or negative), jump_time (s).",
+            "type": "Amplitude Jump",
+            "params": {
+                "jump_size": 2.0,
+                "jump_time": 1.5
+            }
+        },
+        {
+            "_comment": "Impulse Noise: A single, sharp spike added to the signal at a specific time. Parameters: amplitude, impulse_time (s).",
+            "type": "Impulse Noise",
+            "params": {
+                "amplitude": 10.0,
+                "impulse_time": 0.75
+            }
+        },
+        {
+            "_comment": "Outlier: Replaces a single data point with an extreme, absolute value. Parameters: value, outlier_time (s).",
+            "type": "Outlier",
+            "params": {
+                "value": 20.0,
+                "outlier_time": 1.25
+            }
+        },
+        {
+            "_comment": "Bias: Adds a constant DC offset to the entire signal. Parameter: offset.",
+            "type": "Bias",
+            "params": {
+                "offset": 0.5
+            }
+        },
+        {
+            "_comment": "Drift: Adds a linearly increasing or decreasing trend to the signal. Parameter: slope (in units per second).",
+            "type": "Drift",
+            "params": {
+                "slope": 1.0
+            }
+        },
+        {
+            "_comment": "Signal Dropout: Forces the signal to be exactly zero for a specified duration. Parameters: start_time (s), duration (s).",
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 0.5,
+                "duration": 0.5
+            }
+        },
+        {
+            "_comment": "Saturation: Clips the signal's amplitude if it exceeds a certain level. Parameter: threshold (clips the signal at +/- threshold).",
+            "type": "Saturation",
+            "params": {
+                "threshold": 1.0
+            }
+        },
+        {
+            "_comment": "Time Delay: Shifts the entire signal forward in time, padding the beginning with zeros. Parameter: delay (s).",
+            "type": "Time Delay",
+            "params": {
+                "delay": 0.2
+            }
+        }
+    ]
+}

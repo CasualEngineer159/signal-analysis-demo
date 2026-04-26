@@ -1,0 +1,77 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, asdict, fields
+
+@dataclass
+class BaseComponentModel(ABC):
+    """
+    Abstract base class for a pure, UI-agnostic data model of a signal component.
+    It holds parameters as primitive types and contains the core mathematical logic.
+    """
+    name: str = "Base Component"
+
+    @abstractmethod
+    def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        """
+        Generates the output of this component.
+        
+        Args:
+            t (np.ndarray): The time vector.
+            y_in (np.ndarray): The input signal from the previous stage.
+        
+        Returns:
+            np.ndarray: The output signal.
+        """
+        raise NotImplementedError
+
+    def to_dict(self) -> dict:
+        """
+        Serializes the model's parameters to a dictionary.
+        The `name` field is used to identify the component type.
+        """
+        params = asdict(self)
+        # The 'name' is part of the top-level 'type', not the params themselves.
+        # This prevents it from being passed to the __init__ on deserialization.
+        if 'name' in params:
+            del params['name']
+
+        return {
+            'type': self.name,
+            'params': params
+        }
+
+    @classmethod
+    def from_dict(cls, config: dict) -> 'BaseComponentModel':
+        """
+        Creates a model instance from a dictionary configuration.
+        It only populates fields that are defined in the dataclass.
+        """
+        param_config = config.get('params', {})
+        # Get the names of the fields defined in the specific dataclass
+        known_fields = {f.name for f in fields(cls)}
+        # Filter the input dictionary to only include known fields
+        filtered_params = {k: v for k, v in param_config.items() if k in known_fields}
+        return cls(**filtered_params)
+
+@dataclass
+class SignalComponentModel(BaseComponentModel):
+    """Base for models that generate a primary signal."""
+    def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        return y_in + self._generate_signal(t)
+
+    @abstractmethod
+    def _generate_signal(self, t: 'np.ndarray') -> 'np.ndarray':
+        raise NotImplementedError
+
+    def get_max_freq(self) -> float:
+        """Returns the model's maximum frequency content."""
+        return 0
+
+@dataclass
+class AnomalyComponentModel(BaseComponentModel):
+    """Base for models that modify an incoming signal."""
+    def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        return self._apply_anomaly(t, y_in)
+
+    @abstractmethod
+    def _apply_anomaly(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        raise NotImplementedError
