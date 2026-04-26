@@ -6,7 +6,8 @@ from tkinter import ttk
 import json
 from tkinter import filedialog, messagebox
 
-from utils import create_slider_entry
+from utils import create_slider_entry, ScrollableFrame
+from analysis import perform_fft, perform_stft
 from components.signals import (SineController, CosineController, SquareController, 
                               ChirpController, SineVaryingFreqController)
 from components.anomalies import (GaussianNoiseController, ImpulseNoiseController, 
@@ -39,18 +40,21 @@ SIGNAL_TYPES = {k for k, (m, c) in COMPONENT_MAP.items() if issubclass(m, Signal
 class SignalGeneratorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Modular Signal & Anomaly Generator")
-        self.root.geometry("1200x800")
+        self.root.title("Signal Analysis Tool")
+        self.root.geometry("1400x900")
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.controllers = []
         self.selected_controller = None
         self.config_frame = None
         
-        # --- Time axis control ---
         self.periods = tk.DoubleVar(value=5.0)
         self.duration_seconds = tk.DoubleVar(value=2.0)
-        self._is_updating_sliders = False # Lock to prevent recursion
+        self._is_updating_sliders = False
+        
+        self.stft_window_size = tk.IntVar(value=256)
+        self.stft_overlap = tk.IntVar(value=128)
+        self.stft_window_type = tk.StringVar(value='hann')
 
         main_frame = ttk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -59,8 +63,8 @@ class SignalGeneratorApp:
         left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         left_panel.pack_propagate(False)
 
-        plot_panel = ttk.Frame(main_frame)
-        plot_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.setup_file_io_panel(left_panel)
         self.signal_listbox, self.anomaly_listbox = self.setup_component_panels(left_panel)
@@ -68,7 +72,7 @@ class SignalGeneratorApp:
         self.config_panel = ttk.LabelFrame(left_panel, text="Parameters")
         self.config_panel.pack(fill=tk.X, pady=5)
         
-        self.setup_plot_panel(plot_panel)
+        self.setup_plot_panels(right_panel)
         self.update_plot()
 
     def on_closing(self):
@@ -119,34 +123,60 @@ class SignalGeneratorApp:
         self.preview_canvas = FigureCanvasTkAgg(self.preview_fig, master=preview_frame)
         self.preview_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-    def setup_plot_panel(self, parent):
-        self.fig, self.ax = plt.subplots()
-        self.canvas = FigureCanvasTkAgg(self.fig, master=parent)
+    def setup_plot_panels(self, parent):
+        scrollable_area = ScrollableFrame(parent)
+        scrollable_area.pack(fill="both", expand=True)
+        container = scrollable_area.scrollable_frame
+
+        signal_frame = ttk.LabelFrame(container, text="Time-Domain Signal")
+        signal_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5), padx=5)
+        self.fig, self.ax = plt.subplots(figsize=(8, 2.5))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=signal_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        view_frame = ttk.Frame(parent)
+        view_frame = ttk.Frame(signal_frame)
         view_frame.pack(fill=tk.X, pady=(5,0))
         create_slider_entry(view_frame, "Visible Periods:", self.periods, 1, 50, self.on_periods_changed)
         create_slider_entry(view_frame, "Duration (s):", self.duration_seconds, 0.1, 10, self.on_duration_changed)
 
+        fft_frame = ttk.LabelFrame(container, text="FFT Spectrum")
+        fft_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
+        self.fft_fig, self.fft_ax = plt.subplots(figsize=(8, 2.5))
+        self.fft_canvas = FigureCanvasTkAgg(self.fft_fig, master=fft_frame)
+        self.fft_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        stft_outer_frame = ttk.LabelFrame(container, text="STFT Analysis")
+        stft_outer_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0), padx=5)
+        stft_controls_frame = ttk.Frame(stft_outer_frame, width=200)
+        stft_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(5, 10), pady=5)
+        stft_plot_frame = ttk.Frame(stft_outer_frame)
+        stft_plot_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.stft_fig, self.stft_ax = plt.subplots(figsize=(8, 4))
+        self.stft_canvas = FigureCanvasTkAgg(self.stft_fig, master=stft_plot_frame)
+        self.stft_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        create_slider_entry(stft_controls_frame, "Window Size:", self.stft_window_size, 32, 512, self.update_plot)
+        create_slider_entry(stft_controls_frame, "Overlap:", self.stft_overlap, 0, 511, self.update_plot)
+        ttk.Label(stft_controls_frame, text="Window Type:").pack(pady=(10,0))
+        window_combo = ttk.Combobox(stft_controls_frame, textvariable=self.stft_window_type, 
+                                    values=['hann', 'hamming', 'blackman', 'bartlett', 'boxcar'], state='readonly')
+        window_combo.pack(fill=tk.X)
+        window_combo.bind('<<ComboboxSelected>>', self.update_plot)
+
     def on_periods_changed(self, event=None):
         if self._is_updating_sliders: return
         self._is_updating_sliders = True
-        
         max_freq = self._get_max_freq()
         new_duration = self.periods.get() / max_freq if max_freq > 0 else 2
         self.duration_seconds.set(new_duration)
-        
         self.update_plot()
         self._is_updating_sliders = False
 
     def on_duration_changed(self, event=None):
         if self._is_updating_sliders: return
         self._is_updating_sliders = True
-
         max_freq = self._get_max_freq()
         new_periods = self.duration_seconds.get() * max_freq
         self.periods.set(new_periods)
-        
         self.update_plot()
         self._is_updating_sliders = False
 
@@ -192,7 +222,17 @@ class SignalGeneratorApp:
         filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if not filepath: return
         try:
-            config = {'components': [c.model.to_dict() for c in self.controllers]}
+            ui_settings = {
+                "periods": self.periods.get(),
+                "duration_seconds": self.duration_seconds.get(),
+                "stft_window_size": self.stft_window_size.get(),
+                "stft_overlap": self.stft_overlap.get(),
+                "stft_window_type": self.stft_window_type.get()
+            }
+            config = {
+                'ui_settings': ui_settings,
+                'components': [c.model.to_dict() for c in self.controllers]
+            }
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4, ensure_ascii=False)
         except (IOError, TypeError) as e:
@@ -211,6 +251,14 @@ class SignalGeneratorApp:
             if self.config_frame: self.config_frame.destroy()
             self.selected_controller = None
 
+            if 'ui_settings' in config:
+                settings = config['ui_settings']
+                self.periods.set(settings.get('periods', 5.0))
+                self.duration_seconds.set(settings.get('duration_seconds', 2.0))
+                self.stft_window_size.set(settings.get('stft_window_size', 256))
+                self.stft_overlap.set(settings.get('stft_overlap', 128))
+                self.stft_window_type.set(settings.get('stft_window_type', 'hann'))
+
             for comp_conf in config.get('components', []):
                 comp_type = comp_conf.get('type')
                 if comp_type in COMPONENT_MAP:
@@ -227,10 +275,9 @@ class SignalGeneratorApp:
 
     def update_plot(self, event=None):
         duration = self.get_duration()
-        fs = max(1000, self._get_max_freq() * 40)
-        
+        max_freq = self._get_max_freq()
+        fs = max(1000, max_freq * 40)
         if self.selected_controller: self.selected_controller.update_slider_ranges()
-
         t = np.linspace(0, duration, int(fs * duration), endpoint=False)
         if len(t) == 0: return
         
@@ -238,11 +285,25 @@ class SignalGeneratorApp:
         for controller in self.controllers:
             y = controller.model.generate(t, y)
             
-        self.ax.clear()
+        self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear()
+        
         self.ax.plot(t, y)
-        self.ax.set_title("Final Signal"); self.ax.set_xlabel("Time [s]"); self.ax.set_ylabel("Amplitude")
+        self.ax.set_title("Time-Domain Signal"); self.ax.set_xlabel("Time [s]"); self.ax.set_ylabel("Amplitude")
         self.ax.grid(True); self.ax.set_xlim(0, duration)
         self.canvas.draw()
+        
+        xf, yf = perform_fft(y, fs)
+        self.fft_ax.plot(xf, yf)
+        self.fft_ax.set_title("FFT Spectrum"); self.fft_ax.set_xlabel("Frequency [Hz]"); self.fft_ax.set_ylabel("Amplitude")
+        self.fft_ax.grid(True); self.fft_ax.set_xlim(0, max_freq * 2 if max_freq > 0 else 100)
+        self.fft_canvas.draw()
+
+        f, t_stft, Zxx = perform_stft(y, fs, self.stft_window_type.get(), self.stft_window_size.get(), self.stft_overlap.get())
+        if Zxx.size > 0:
+            self.stft_ax.pcolormesh(t_stft, f, Zxx, shading='gouraud')
+        self.stft_ax.set_title(""); self.stft_ax.set_xlabel("Time [s]"); self.stft_ax.set_ylabel("Frequency [Hz]")
+        self.stft_ax.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
+        self.stft_canvas.draw()
 
         self.preview_ax.clear()
         if self.selected_controller:

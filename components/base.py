@@ -19,14 +19,14 @@ class ComponentController(ABC):
         self.config_widgets = []
         self.vars = {}
 
-    def update_model_from_vars(self):
+    def update_model_from_vars(self, *args):
         """Updates the model's primitive types from the UI's tk.Vars."""
         for name, var in self.vars.items():
             if hasattr(self.model, name):
                 setattr(self.model, name, var.get())
         self.update_callback()
 
-    def update_vars_from_model(self):
+    def update_vars_from_model(self, *args):
         """Updates the UI's tk.Vars from the model's primitive types."""
         for name, var in self.vars.items():
             if hasattr(self.model, name):

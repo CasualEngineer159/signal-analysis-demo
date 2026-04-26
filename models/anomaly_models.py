@@ -118,11 +118,24 @@ class TimeDelayModel(AnomalyComponentModel):
     delay: float = 0.2
 
     def _apply_anomaly(self, t: np.ndarray, y_in: np.ndarray) -> np.ndarray:
-        if len(t) == 0 or self.delay <= 0: return y_in
-        # Calculate delay in samples, ensuring it's not negative
-        delay_samples = int(self.delay * (len(t) / (t[-1] - t[0])))
-        if delay_samples <= 0: return y_in
+        # Edge case: not enough points to calculate duration or apply delay
+        if len(t) < 2 or self.delay <= 0:
+            return y_in
+
+        # Robustly calculate sampling frequency
+        duration = t[-1] - t[0]
+        if duration <= 0:
+            return y_in
+        fs = len(t) / duration
+
+        delay_samples = int(self.delay * fs)
+        if delay_samples <= 0:
+            return y_in
         
+        # If delay is as long or longer than the signal, output is all zeros
+        if delay_samples >= len(t):
+            return np.zeros_like(y_in)
+
         y_out = np.roll(y_in, delay_samples)
         y_out[:delay_samples] = 0
         return y_out

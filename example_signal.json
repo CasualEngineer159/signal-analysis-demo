@@ -1,5 +1,13 @@
 {
-    "_comment": "This is a comprehensive reference configuration file for the signal generator. All components are in a single 'components' list. The application will correctly place them in the UI.",
+    "_comment": "This is a comprehensive reference configuration file. It includes UI settings and an example of every available component.",
+    "ui_settings": {
+        "_comment": "This section stores the state of the main UI controls for complete reproducibility.",
+        "periods": 5.0,
+        "duration_seconds": 1.0,
+        "stft_window_size": 256,
+        "stft_overlap": 128,
+        "stft_window_type": "hann"
+    },
     "components": [
         {
             "_comment": "Sine: A standard sine wave. Parameters: amplitude, frequency (Hz), phase (degrees).",
@@ -11,7 +19,7 @@
             }
         },
         {
-            "_comment": "Sine (Varying Freq): A sine wave that abruptly changes frequency at a specified time. Parameters: amplitude, start_freq (Hz), end_freq (Hz), change_time (s).",
+            "_comment": "Sine (Varying Freq): A sine wave that abruptly changes frequency. Parameters: amplitude, start_freq (Hz), end_freq (Hz), change_time (s).",
             "type": "Sine (Varying Freq)",
             "params": {
                 "amplitude": 1.0,
@@ -21,7 +29,7 @@
             }
         },
         {
-            "_comment": "Cosine: A standard cosine wave, which is a sine wave with a 90-degree phase shift. Parameters: amplitude, frequency (Hz), phase (degrees).",
+            "_comment": "Cosine: A standard cosine wave. Parameters: amplitude, frequency (Hz), phase (degrees).",
             "type": "Cosine",
             "params": {
                 "amplitude": 1.0,
@@ -30,7 +38,7 @@
             }
         },
         {
-            "_comment": "Square: A square wave. Parameters: amplitude, frequency (Hz), phase (degrees), and duty_cycle (0.0 to 1.0, where 0.5 is a perfect square).",
+            "_comment": "Square: A square wave. Parameters: amplitude, frequency (Hz), phase (degrees), and duty_cycle (0.0 to 1.0).",
             "type": "Square",
             "params": {
                 "amplitude": 1.0,
@@ -40,7 +48,7 @@
             }
         },
         {
-            "_comment": "Chirp: A signal with a linearly increasing frequency over its duration. Parameters: amplitude, start_freq (Hz), end_freq (Hz).",
+            "_comment": "Chirp: A signal with a linearly increasing frequency. Parameters: amplitude, start_freq (Hz), end_freq (Hz).",
             "type": "Chirp",
             "params": {
                 "amplitude": 1.0,
@@ -49,7 +57,7 @@
             }
         },
         {
-            "_comment": "Gaussian Noise: Adds random noise from a normal distribution. std_dev controls power. The seed makes the noise pattern reproducible. Use the 'Regenerate' button for a new pattern.",
+            "_comment": "Gaussian Noise: Adds random noise. The seed makes the noise pattern reproducible.",
             "type": "Gaussian Noise",
             "params": {
                 "std_dev": 0.1,
@@ -57,7 +65,7 @@
             }
         },
         {
-            "_comment": "Amplitude Jump: An instantaneous DC shift in the signal from a certain point onwards. Parameters: jump_size (can be positive or negative), jump_time (s).",
+            "_comment": "Amplitude Jump: An instantaneous DC shift in the signal.",
             "type": "Amplitude Jump",
             "params": {
                 "jump_size": 2.0,
@@ -65,7 +73,7 @@
             }
         },
         {
-            "_comment": "Impulse Noise: A single, sharp spike added to the signal at a specific time. Parameters: amplitude, impulse_time (s).",
+            "_comment": "Impulse Noise: A single, sharp spike added to the signal.",
             "type": "Impulse Noise",
             "params": {
                 "amplitude": 10.0,
@@ -73,7 +81,7 @@
             }
         },
         {
-            "_comment": "Outlier: Replaces a single data point with an extreme, absolute value. Parameters: value, outlier_time (s).",
+            "_comment": "Outlier: Replaces a single data point with an extreme value.",
             "type": "Outlier",
             "params": {
                 "value": 20.0,
@@ -81,21 +89,21 @@
             }
         },
         {
-            "_comment": "Bias: Adds a constant DC offset to the entire signal. Parameter: offset.",
+            "_comment": "Bias: Adds a constant DC offset to the entire signal.",
             "type": "Bias",
             "params": {
                 "offset": 0.5
             }
         },
         {
-            "_comment": "Drift: Adds a linearly increasing or decreasing trend to the signal. Parameter: slope (in units per second).",
+            "_comment": "Drift: Adds a linearly increasing or decreasing trend.",
             "type": "Drift",
             "params": {
                 "slope": 1.0
             }
         },
         {
-            "_comment": "Signal Dropout: Forces the signal to be exactly zero for a specified duration. Parameters: start_time (s), duration (s).",
+            "_comment": "Signal Dropout: Forces the signal to be zero for a duration.",
             "type": "Signal Dropout",
             "params": {
                 "start_time": 0.5,
@@ -103,14 +111,14 @@
             }
         },
         {
-            "_comment": "Saturation: Clips the signal's amplitude if it exceeds a certain level. Parameter: threshold (clips the signal at +/- threshold).",
+            "_comment": "Saturation: Clips the signal's amplitude if it exceeds a threshold.",
             "type": "Saturation",
             "params": {
                 "threshold": 1.0
             }
         },
         {
-            "_comment": "Time Delay: Shifts the entire signal forward in time, padding the beginning with zeros. Parameter: delay (s).",
+            "_comment": "Time Delay: Shifts the entire signal forward in time.",
             "type": "Time Delay",
             "params": {
                 "delay": 0.2
