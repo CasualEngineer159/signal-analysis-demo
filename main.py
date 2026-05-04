@@ -4,10 +4,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from tkinter import ttk
 import json
+import csv
 from tkinter import filedialog, messagebox
 
 from utils import create_slider_entry, ScrollableFrame
-from analysis import perform_fft, perform_stft
+from analysis import perform_fft, perform_stft, calculate_spectral_flux
 from components.signals import (SineController, CosineController, SquareController, 
                               ChirpController, SineVaryingFreqController)
 from components.anomalies import (GaussianNoiseController, ImpulseNoiseController, 
@@ -55,22 +56,38 @@ class SignalGeneratorApp:
         self.stft_window_size = tk.IntVar(value=256)
         self.stft_overlap = tk.IntVar(value=128)
         self.stft_window_type = tk.StringVar(value='hann')
+        self.stft_auto_overlap = tk.BooleanVar(value=True)
+        self.stft_overlap_widget = None
+
+        self._last_flux_data = None
+        self._drag_data = {"item_index": None}
 
         main_frame = ttk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        left_panel = ttk.Frame(main_frame, width=350)
-        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
-        left_panel.pack_propagate(False)
+        left_container = ttk.Frame(main_frame, width=350)
+        left_container.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        left_container.pack_propagate(False)
+
+        left_scroll = ScrollableFrame(left_container, h_scroll=False)
+        left_scroll.pack(fill=tk.BOTH, expand=True)
+        left_panel = left_scroll.scrollable_frame
 
         right_panel = ttk.Frame(main_frame)
         right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.setup_file_io_panel(left_panel)
-        self.signal_listbox, self.anomaly_listbox = self.setup_component_panels(left_panel)
+        self.setup_component_panels(left_panel)
         self.setup_preview_panel(left_panel)
+        
         self.config_panel = ttk.LabelFrame(left_panel, text="Parameters")
-        self.config_panel.pack(fill=tk.X, pady=5)
+        self.config_panel.pack(fill=tk.X, pady=(10, 5))
+        
+        self.setup_time_settings_panel(left_panel)
+        
+        ttk.Separator(left_panel, orient='horizontal').pack(fill='x', pady=10)
+        
+        self.setup_stft_settings_panel(left_panel)
         
         self.setup_plot_panels(right_panel)
         self.update_plot()
@@ -84,7 +101,7 @@ class SignalGeneratorApp:
 
     def setup_file_io_panel(self, parent):
         io_frame = ttk.LabelFrame(parent, text="Configuration")
-        io_frame.pack(fill=tk.X, pady=5)
+        io_frame.pack(fill=tk.X, pady=(10, 5))
         btn_frame = ttk.Frame(io_frame)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
         save_btn = ttk.Button(btn_frame, text="Save Config", command=self.save_configuration)
@@ -93,74 +110,223 @@ class SignalGeneratorApp:
         load_btn.pack(side=tk.RIGHT, expand=True, fill=tk.X, padx=(5, 0))
 
     def setup_component_panels(self, parent):
-        sig_listbox = self._create_component_panel(parent, "Signal Sources", {k:v for k,v in COMPONENT_MAP.items() if k in SIGNAL_TYPES})
-        anom_listbox = self._create_component_panel(parent, "Anomalies & Noise", {k:v for k,v in COMPONENT_MAP.items() if k not in SIGNAL_TYPES})
-        sig_listbox.bind('<<ListboxSelect>>', lambda e: self.on_component_select(e, anom_listbox, sig_listbox))
-        anom_listbox.bind('<<ListboxSelect>>', lambda e: self.on_component_select(e, sig_listbox, anom_listbox))
-        return sig_listbox, anom_listbox
+        # Execution Pipeline
+        pipeline_frame = ttk.LabelFrame(parent, text="Execution Pipeline")
+        pipeline_frame.pack(fill=tk.X, pady=(10, 5))
+        
+        self.pipeline_listbox = tk.Listbox(pipeline_frame, height=6, exportselection=False)
+        self.pipeline_listbox.pack(fill=tk.X, padx=5, pady=5)
+        self.pipeline_listbox.bind('<<ListboxSelect>>', self.on_component_select)
+        
+        # Drag and Drop bindings
+        self.pipeline_listbox.bind('<Button-1>', self.on_drag_start)
+        self.pipeline_listbox.bind('<B1-Motion>', self.on_drag_motion)
+        self.pipeline_listbox.bind('<ButtonRelease-1>', self.on_drag_release)
+        
+        btn_frame = ttk.Frame(pipeline_frame)
+        btn_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
+        ttk.Button(btn_frame, text="Move Up", command=self.move_component_up).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 2))
+        ttk.Button(btn_frame, text="Move Down", command=self.move_component_down).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 2))
+        ttk.Button(btn_frame, text="Remove", command=self.remove_component).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 0))
 
-    def _create_component_panel(self, parent, title, classes):
-        frame = ttk.LabelFrame(parent, text=title)
-        frame.pack(fill=tk.X, pady=5)
-        listbox = tk.Listbox(frame, height=5, exportselection=False)
-        listbox.pack(fill=tk.X, padx=5, pady=5)
-        btn_frame = ttk.Frame(frame)
-        btn_frame.pack(fill=tk.X, padx=5, pady=5)
-        comp_type_var = tk.StringVar(value=list(classes.keys())[0])
-        add_combo = ttk.Combobox(btn_frame, textvariable=comp_type_var, values=list(classes.keys()), state='readonly')
-        add_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        add_cmd = lambda: self.add_component(comp_type_var.get(), listbox)
-        rem_cmd = lambda: self.remove_component(listbox)
-        ttk.Button(btn_frame, text="Add", command=add_cmd).pack(side=tk.LEFT, padx=(5,0))
-        ttk.Button(btn_frame, text="Remove", command=rem_cmd).pack(side=tk.LEFT, padx=(5,0))
-        return listbox
+        # Add Signal
+        sig_frame = ttk.LabelFrame(parent, text="Add Signal")
+        sig_frame.pack(fill=tk.X, pady=(5, 5))
+        sig_btn_frame = ttk.Frame(sig_frame)
+        sig_btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        sig_classes = {k:v for k,v in COMPONENT_MAP.items() if k in SIGNAL_TYPES}
+        sig_var = tk.StringVar(value=list(sig_classes.keys())[0])
+        ttk.Combobox(sig_btn_frame, textvariable=sig_var, values=list(sig_classes.keys()), state='readonly').pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(sig_btn_frame, text="Add", command=lambda: self.add_component(sig_var.get())).pack(side=tk.LEFT, padx=(5,0))
+
+        # Add Anomaly
+        anom_frame = ttk.LabelFrame(parent, text="Add Anomaly & Noise")
+        anom_frame.pack(fill=tk.X, pady=(5, 5))
+        anom_btn_frame = ttk.Frame(anom_frame)
+        anom_btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        anom_classes = {k:v for k,v in COMPONENT_MAP.items() if k not in SIGNAL_TYPES}
+        anom_var = tk.StringVar(value=list(anom_classes.keys())[0])
+        ttk.Combobox(anom_btn_frame, textvariable=anom_var, values=list(anom_classes.keys()), state='readonly').pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(anom_btn_frame, text="Add", command=lambda: self.add_component(anom_var.get())).pack(side=tk.LEFT, padx=(5,0))
+
+    def on_drag_start(self, event):
+        """Record the item's starting index."""
+        index = self.pipeline_listbox.nearest(event.y)
+        if index >= 0:
+            self._drag_data["item_index"] = index
+
+    def on_drag_motion(self, event):
+        """Move the item visually in the listbox as it is dragged."""
+        current_index = self._drag_data["item_index"]
+        if current_index is None:
+            return
+            
+        new_index = self.pipeline_listbox.nearest(event.y)
+        
+        if new_index != current_index and new_index >= 0 and new_index < self.pipeline_listbox.size():
+            # Update Listbox visually
+            text = self.pipeline_listbox.get(current_index)
+            self.pipeline_listbox.delete(current_index)
+            self.pipeline_listbox.insert(new_index, text)
+            
+            # Update controllers array to match visual order
+            controller = self.controllers.pop(current_index)
+            self.controllers.insert(new_index, controller)
+            
+            # Maintain selection if it was the selected item
+            if self.selected_controller and self.selected_controller.id == controller.id:
+                self.pipeline_listbox.selection_clear(0, tk.END)
+                self.pipeline_listbox.selection_set(new_index)
+            else:
+                # If we moved an item past the currently selected one, we need to fix the visual selection
+                if self.selected_controller:
+                    try:
+                        sel_idx = self.controllers.index(self.selected_controller)
+                        self.pipeline_listbox.selection_clear(0, tk.END)
+                        self.pipeline_listbox.selection_set(sel_idx)
+                    except ValueError:
+                        pass
+                        
+            self._drag_data["item_index"] = new_index
+
+    def on_drag_release(self, event):
+        """Finalize drag and trigger an update."""
+        if self._drag_data["item_index"] is not None:
+            self._drag_data["item_index"] = None
+            self.update_plot()
 
     def setup_preview_panel(self, parent):
         preview_frame = ttk.LabelFrame(parent, text="Component Preview")
-        preview_frame.pack(fill=tk.X, pady=5)
+        preview_frame.pack(fill=tk.X, pady=(10, 5))
         self.preview_fig, self.preview_ax = plt.subplots(figsize=(4, 1.5))
         self.preview_fig.tight_layout()
         self.preview_canvas = FigureCanvasTkAgg(self.preview_fig, master=preview_frame)
         self.preview_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
+    def setup_time_settings_panel(self, parent):
+        time_frame = ttk.LabelFrame(parent, text="Global Time Settings")
+        time_frame.pack(fill=tk.X, pady=(10, 5))
+        create_slider_entry(time_frame, "Visible Periods:", self.periods, 1, 50, self.on_periods_changed)
+        create_slider_entry(time_frame, "Duration (s):", self.duration_seconds, 0.1, 10, self.on_duration_changed)
+
+    def setup_stft_settings_panel(self, parent):
+        stft_controls_frame = ttk.LabelFrame(parent, text="STFT Settings")
+        stft_controls_frame.pack(fill=tk.X, pady=(10, 5))
+        
+        create_slider_entry(stft_controls_frame, "Window Size:", self.stft_window_size, 32, 512, self.on_stft_params_changed)
+        self.stft_overlap_widget = create_slider_entry(stft_controls_frame, "Overlap:", self.stft_overlap, 0, 511, self.on_stft_params_changed)
+
+        auto_overlap_check = ttk.Checkbutton(
+            stft_controls_frame,
+            text="Auto Overlap (50%)",
+            variable=self.stft_auto_overlap,
+            command=self.on_stft_params_changed
+        )
+        auto_overlap_check.pack(pady=(5, 0), anchor='w', padx=5)
+
+        ttk.Label(stft_controls_frame, text="Window Type:").pack(pady=(5,0), padx=5, anchor='w')
+        window_combo = ttk.Combobox(stft_controls_frame, textvariable=self.stft_window_type, 
+                                    values=['hann', 'hamming', 'blackman', 'bartlett', 'boxcar'], state='readonly')
+        window_combo.pack(fill=tk.X, padx=5, pady=(0, 5))
+        window_combo.bind('<<ComboboxSelected>>', self.on_stft_params_changed)
+        
+        ttk.Button(stft_controls_frame, text="Export Flux Data to CSV", command=self.export_flux_to_csv).pack(fill=tk.X, padx=5, pady=(10, 5))
+        
+        self.on_stft_params_changed()
+
+    def export_flux_to_csv(self):
+        if self._last_flux_data is None:
+            messagebox.showwarning("No Data", "No spectral flux data is available to export.")
+            return
+            
+        t_stft_core, flux = self._last_flux_data
+        
+        filepath = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not filepath:
+            return
+            
+        try:
+            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['Time [s]', 'Spectral Flux'])
+                for t_val, f_val in zip(t_stft_core, flux):
+                    writer.writerow([t_val, f_val])
+            messagebox.showinfo("Export Successful", f"Successfully exported spectral flux data to {filepath}")
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export data:\n{e}")
+
     def setup_plot_panels(self, parent):
-        scrollable_area = ScrollableFrame(parent)
+        scrollable_area = ScrollableFrame(parent, h_scroll=True)
         scrollable_area.pack(fill="both", expand=True)
         container = scrollable_area.scrollable_frame
 
-        signal_frame = ttk.LabelFrame(container, text="Time-Domain Signal")
+        left_graphs = ttk.Frame(container)
+        left_graphs.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+
+        right_graphs = ttk.Frame(container)
+        right_graphs.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Combined Time-Domain, STFT, and Spectral Flux plot
+        signal_frame = ttk.LabelFrame(left_graphs, text="Time-Domain & STFT Analysis")
         signal_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5), padx=5)
-        self.fig, self.ax = plt.subplots(figsize=(8, 2.5))
+        self.fig, (self.ax, self.stft_ax, self.flux_ax) = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(6, 6.5))
+        self.fig.tight_layout()
         self.canvas = FigureCanvasTkAgg(self.fig, master=signal_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        view_frame = ttk.Frame(signal_frame)
-        view_frame.pack(fill=tk.X, pady=(5,0))
-        create_slider_entry(view_frame, "Visible Periods:", self.periods, 1, 50, self.on_periods_changed)
-        create_slider_entry(view_frame, "Duration (s):", self.duration_seconds, 0.1, 10, self.on_duration_changed)
 
-        fft_frame = ttk.LabelFrame(container, text="FFT Spectrum")
-        fft_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
-        self.fft_fig, self.fft_ax = plt.subplots(figsize=(8, 2.5))
+        # FFT Spectrum
+        fft_frame = ttk.LabelFrame(right_graphs, text="FFT Spectrum")
+        fft_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5), padx=5, anchor='n')
+        self.fft_fig, self.fft_ax = plt.subplots(figsize=(6, 2.5))
+        self.fft_fig.tight_layout()
         self.fft_canvas = FigureCanvasTkAgg(self.fft_fig, master=fft_frame)
         self.fft_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        stft_outer_frame = ttk.LabelFrame(container, text="STFT Analysis")
-        stft_outer_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0), padx=5)
-        stft_controls_frame = ttk.Frame(stft_outer_frame, width=200)
-        stft_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(5, 10), pady=5)
-        stft_plot_frame = ttk.Frame(stft_outer_frame)
-        stft_plot_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.stft_fig, self.stft_ax = plt.subplots(figsize=(8, 4))
-        self.stft_canvas = FigureCanvasTkAgg(self.stft_fig, master=stft_plot_frame)
-        self.stft_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        # Detection Results Table
+        results_frame = ttk.LabelFrame(right_graphs, text="Detection Results")
+        results_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 5), padx=5)
         
-        create_slider_entry(stft_controls_frame, "Window Size:", self.stft_window_size, 32, 512, self.update_plot)
-        create_slider_entry(stft_controls_frame, "Overlap:", self.stft_overlap, 0, 511, self.update_plot)
-        ttk.Label(stft_controls_frame, text="Window Type:").pack(pady=(10,0))
-        window_combo = ttk.Combobox(stft_controls_frame, textvariable=self.stft_window_type, 
-                                    values=['hann', 'hamming', 'blackman', 'bartlett', 'boxcar'], state='readonly')
-        window_combo.pack(fill=tk.X)
-        window_combo.bind('<<ComboboxSelected>>', self.update_plot)
+        # Setup Treeview inside the frame
+        columns = ("Algorithm", "Detected", "Time [s]")
+        self.results_table = ttk.Treeview(results_frame, columns=columns, show="headings", height=5)
+        
+        for col in columns:
+            self.results_table.heading(col, text=col)
+            self.results_table.column(col, width=120, anchor=tk.CENTER)
+            
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(results_frame, orient=tk.VERTICAL, command=self.results_table.yview)
+        self.results_table.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.results_table.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+
+    def on_stft_params_changed(self, event=None):
+        """Handles all changes to STFT parameters and updates UI state."""
+        if not hasattr(self, 'stft_overlap_widget') or self.stft_overlap_widget is None:
+            if hasattr(self, 'ax'):
+                self.update_plot()
+            return
+
+        window_size = self.stft_window_size.get()
+        self.stft_overlap_widget.slider.config(to=window_size - 1)
+
+        if self.stft_auto_overlap.get():
+            self.stft_overlap.set(window_size // 2)
+            for widget in self.stft_overlap_widget.winfo_children():
+                if isinstance(widget, (ttk.Entry, ttk.Scale)):
+                    widget.config(state='disabled')
+        else:
+            for widget in self.stft_overlap_widget.winfo_children():
+                if isinstance(widget, (ttk.Entry, ttk.Scale)):
+                    widget.config(state='normal')
+
+        if self.stft_overlap.get() >= window_size:
+            self.stft_overlap.set(window_size - 1)
+
+        if hasattr(self, 'ax'):
+            self.update_plot()
 
     def on_periods_changed(self, event=None):
         if self._is_updating_sliders: return
@@ -180,37 +346,69 @@ class SignalGeneratorApp:
         self.update_plot()
         self._is_updating_sliders = False
 
-    def add_component(self, comp_name, listbox, model_config=None):
+    def add_component(self, comp_name, model_config=None):
         model_class, controller_class = COMPONENT_MAP[comp_name]
         model = model_class.from_dict(model_config) if model_config else model_class()
         controller = controller_class(model, self.update_plot, self.get_duration)
         self.controllers.append(controller)
-        listbox.insert(tk.END, str(controller))
+        self.pipeline_listbox.insert(tk.END, str(controller))
+        self.update_plot()
         return controller
 
-    def remove_component(self, listbox):
-        idxs = listbox.curselection()
+    def remove_component(self):
+        idxs = self.pipeline_listbox.curselection()
         if not idxs: return
-        selected_str = listbox.get(idxs[0])
-        listbox.delete(idxs[0])
-        controller_to_remove = next((c for c in self.controllers if str(c) == selected_str), None)
-        if controller_to_remove:
-            self.controllers.remove(controller_to_remove)
-            if self.selected_controller and self.selected_controller.id == controller_to_remove.id:
-                if self.config_frame: self.config_frame.destroy()
-                self.selected_controller = None
+        idx = idxs[0]
+        self.pipeline_listbox.delete(idx)
+        controller_to_remove = self.controllers.pop(idx)
+        if self.selected_controller and self.selected_controller.id == controller_to_remove.id:
+            if self.config_frame: self.config_frame.destroy()
+            self.selected_controller = None
         self.update_plot()
 
-    def on_component_select(self, event, other_listbox, active_listbox):
-        other_listbox.selection_clear(0, tk.END)
-        idxs = active_listbox.curselection()
+    def move_component_up(self):
+        idxs = self.pipeline_listbox.curselection()
+        if not idxs: return
+        idx = idxs[0]
+        if idx == 0: return # Already at top
+        
+        # Swap in controllers
+        self.controllers[idx - 1], self.controllers[idx] = self.controllers[idx], self.controllers[idx - 1]
+        
+        # Swap in listbox
+        text = self.pipeline_listbox.get(idx)
+        self.pipeline_listbox.delete(idx)
+        self.pipeline_listbox.insert(idx - 1, text)
+        self.pipeline_listbox.selection_set(idx - 1)
+        
+        self.update_plot()
+
+    def move_component_down(self):
+        idxs = self.pipeline_listbox.curselection()
+        if not idxs: return
+        idx = idxs[0]
+        if idx == len(self.controllers) - 1: return # Already at bottom
+        
+        # Swap in controllers
+        self.controllers[idx + 1], self.controllers[idx] = self.controllers[idx], self.controllers[idx + 1]
+        
+        # Swap in listbox
+        text = self.pipeline_listbox.get(idx)
+        self.pipeline_listbox.delete(idx)
+        self.pipeline_listbox.insert(idx + 1, text)
+        self.pipeline_listbox.selection_set(idx + 1)
+        
+        self.update_plot()
+
+    def on_component_select(self, event=None):
+        idxs = self.pipeline_listbox.curselection()
         if not idxs:
             if self.config_frame: self.config_frame.destroy()
             self.selected_controller = None
             self.update_plot()
             return
-        selected_str = active_listbox.get(idxs[0])
-        self.selected_controller = next((c for c in self.controllers if str(c) == selected_str), None)
+        idx = idxs[0]
+        self.selected_controller = self.controllers[idx]
         if self.config_frame: self.config_frame.destroy()
         self.config_frame = ttk.Frame(self.config_panel)
         self.config_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -227,7 +425,8 @@ class SignalGeneratorApp:
                 "duration_seconds": self.duration_seconds.get(),
                 "stft_window_size": self.stft_window_size.get(),
                 "stft_overlap": self.stft_overlap.get(),
-                "stft_window_type": self.stft_window_type.get()
+                "stft_window_type": self.stft_window_type.get(),
+                "stft_auto_overlap": self.stft_auto_overlap.get()
             }
             config = {
                 'ui_settings': ui_settings,
@@ -246,8 +445,7 @@ class SignalGeneratorApp:
                 config = json.load(f)
             
             self.controllers.clear()
-            self.signal_listbox.delete(0, tk.END)
-            self.anomaly_listbox.delete(0, tk.END)
+            self.pipeline_listbox.delete(0, tk.END)
             if self.config_frame: self.config_frame.destroy()
             self.selected_controller = None
 
@@ -258,13 +456,13 @@ class SignalGeneratorApp:
                 self.stft_window_size.set(settings.get('stft_window_size', 256))
                 self.stft_overlap.set(settings.get('stft_overlap', 128))
                 self.stft_window_type.set(settings.get('stft_window_type', 'hann'))
+                self.stft_auto_overlap.set(settings.get('stft_auto_overlap', True))
 
             for comp_conf in config.get('components', []):
                 comp_type = comp_conf.get('type')
                 if comp_type in COMPONENT_MAP:
-                    listbox = self.signal_listbox if comp_type in SIGNAL_TYPES else self.anomaly_listbox
-                    self.add_component(comp_type, listbox, comp_conf)
-            self.update_plot()
+                    self.add_component(comp_type, comp_conf)
+            self.on_stft_params_changed()
         except (IOError, json.JSONDecodeError, KeyError) as e:
             messagebox.showerror("Load Error", f"Failed to load or parse configuration file:\n{e}")
 
@@ -278,42 +476,109 @@ class SignalGeneratorApp:
         max_freq = self._get_max_freq()
         fs = max(1000, max_freq * 40)
         if self.selected_controller: self.selected_controller.update_slider_ranges()
-        t = np.linspace(0, duration, int(fs * duration), endpoint=False)
-        if len(t) == 0: return
         
-        y = np.zeros_like(t)
+        # Calculate padding
+        padding_time = (self.stft_window_size.get() / 2) / fs
+        
+        # Extended time vector for generating the padded signal
+        t_ext = np.linspace(-padding_time, duration + padding_time, int(fs * (duration + 2 * padding_time)), endpoint=False)
+        if len(t_ext) == 0: return
+        
+        y_ext = np.zeros_like(t_ext)
         for controller in self.controllers:
-            y = controller.model.generate(t, y)
-            
-        self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear()
-        
+            y_ext = controller.model.generate(t_ext, y_ext)
+
+        # Core time vector for plotting standard Time-Domain and FFT
+        t_core_idx = (t_ext >= 0) & (t_ext < duration)
+        t = t_ext[t_core_idx]
+        y = y_ext[t_core_idx]
+
+        self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear(); self.flux_ax.clear()
+
+        # Time-Domain Plot
         self.ax.plot(t, y)
-        self.ax.set_title("Time-Domain Signal"); self.ax.set_xlabel("Time [s]"); self.ax.set_ylabel("Amplitude")
-        self.ax.grid(True); self.ax.set_xlim(0, duration)
+        self.ax.set_title("Time-Domain Signal")
+        self.ax.set_ylabel("Amplitude")
+        self.ax.set_xlim(0, duration) # Force strict limits
+        self.ax.grid(True)
+
+        # STFT Plot on PADDED signal
+        f, t_stft_ext, Zxx_ext = perform_stft(y_ext, fs, self.stft_window_type.get(), self.stft_window_size.get(), self.stft_overlap.get())
+        
+        # Shift the STFT time axis back to start at -padding_time
+        t_stft_ext = t_stft_ext - padding_time
+        
+        # 1. Plot the EXTENDED STFT. This prevents any white gaps on the edges because 
+        # Matplotlib's xlim will visually crop it perfectly to the axis boundaries.
+        if Zxx_ext.size > 0:
+            self.stft_ax.pcolormesh(t_stft_ext, f, Zxx_ext, shading='gouraud')
+        self.stft_ax.set_ylabel("Frequency [Hz]")
+        self.stft_ax.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
+        self.stft_ax.set_xlim(0, duration) # Force strict visual limits
+
+        # 2. Extract the absolutely clean CORE area to prevent edge artifacts in Spectral Flux
+        stft_core_idx = (t_stft_ext >= 0) & (t_stft_ext <= duration)
+        t_stft_core = t_stft_ext[stft_core_idx]
+        Zxx_core = Zxx_ext[:, stft_core_idx]
+
+        # Spectral Flux Plot calculated ONLY on clean core data
+        flux, peak_times = calculate_spectral_flux(Zxx_core, t_stft_core)
+
+        # Store for CSV export
+        self._last_flux_data = (t_stft_core, flux) if len(flux) > 0 else None
+
+        if len(flux) > 0:
+            self.flux_ax.plot(t_stft_core, flux, color='purple')
+            for i, peak_time in enumerate(peak_times):
+                self.flux_ax.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
+            
+            if len(peak_times) > 0:
+                self.flux_ax.legend(loc='upper right', fontsize='small')
+                
+        self.flux_ax.set_xlabel("Time [s]")
+        self.flux_ax.set_ylabel("Spectral Flux")
+        self.flux_ax.set_xlim(0, duration) # Force strict visual limits
+        self.flux_ax.grid(True)
+        
+        self.fig.tight_layout()
         self.canvas.draw()
         
+        # FFT Plot
         xf, yf = perform_fft(y, fs)
         self.fft_ax.plot(xf, yf)
-        self.fft_ax.set_title("FFT Spectrum"); self.fft_ax.set_xlabel("Frequency [Hz]"); self.fft_ax.set_ylabel("Amplitude")
-        self.fft_ax.grid(True); self.fft_ax.set_xlim(0, max_freq * 2 if max_freq > 0 else 100)
+        self.fft_ax.set_title("FFT Spectrum")
+        self.fft_ax.set_xlabel("Frequency [Hz]")
+        self.fft_ax.set_ylabel("Amplitude")
+        self.fft_ax.grid(True)
+        self.fft_ax.set_xlim(0, max_freq * 2 if max_freq > 0 else 100)
+        self.fft_fig.tight_layout()
         self.fft_canvas.draw()
 
-        f, t_stft, Zxx = perform_stft(y, fs, self.stft_window_type.get(), self.stft_window_size.get(), self.stft_overlap.get())
-        if Zxx.size > 0:
-            self.stft_ax.pcolormesh(t_stft, f, Zxx, shading='gouraud')
-        self.stft_ax.set_title(""); self.stft_ax.set_xlabel("Time [s]"); self.stft_ax.set_ylabel("Frequency [Hz]")
-        self.stft_ax.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
-        self.stft_canvas.draw()
+        # Update Results Table
+        self.results_table.delete(*self.results_table.get_children())
+        self.results_table.insert("", tk.END, values=("FFT Global", "Yes" if len(yf) > 0 and np.max(yf) > 0 else "No", "N/A"))
+        
+        if len(peak_times) > 0:
+            peak_str = ", ".join([f"{pt:.3f}" for pt in peak_times])
+            detected_str = "Yes"
+        else:
+            peak_str = "N/A"
+            detected_str = "No"
+            
+        self.results_table.insert("", tk.END, values=("STFT Spectral Flux", detected_str, peak_str))
 
+        # Preview Plot
         self.preview_ax.clear()
         if self.selected_controller:
             y_preview = self.selected_controller.model.generate(t, np.zeros_like(t))
             self.preview_ax.plot(t, y_preview, color='darkorange')
             self.preview_ax.set_title(f"Preview: {self.selected_controller.model.name}", fontsize=9)
-            self.preview_ax.set_xlim(self.ax.get_xlim()); self.preview_ax.set_ylim(self.ax.get_ylim())
+            self.preview_ax.set_xlim(self.ax.get_xlim())
+            self.preview_ax.set_ylim(self.ax.get_ylim())
         else:
             self.preview_ax.set_title("No Component Selected", fontsize=9)
-        self.preview_ax.tick_params(axis='x', labelsize=8); self.preview_ax.tick_params(axis='y', labelsize=8)
+        self.preview_ax.tick_params(axis='x', labelsize=8)
+        self.preview_ax.tick_params(axis='y', labelsize=8)
         self.preview_canvas.draw()
 
 if __name__ == '__main__':

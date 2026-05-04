@@ -6,10 +6,16 @@ class ScrollableFrame(ttk.Frame):
     A custom ttk.Frame that is scrollable with a mousewheel or a scrollbar.
     Widgets are placed into the `self.scrollable_frame`.
     """
-    def __init__(self, container, *args, **kwargs):
+    def __init__(self, container, h_scroll=False, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         canvas = tk.Canvas(self)
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        v_scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        
+        if h_scroll:
+            h_scrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
+            canvas.configure(xscrollcommand=h_scrollbar.set)
+            h_scrollbar.pack(side="bottom", fill="x")
+            
         self.scrollable_frame = ttk.Frame(canvas)
 
         self.scrollable_frame.bind(
@@ -19,18 +25,26 @@ class ScrollableFrame(ttk.Frame):
             )
         )
 
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        self.window_id = canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=v_scrollbar.set)
+        
+        if not h_scroll:
+            canvas.bind("<Configure>", lambda e: canvas.itemconfig(self.window_id, width=e.width))
 
         # Bind mousewheel scrolling
-        self.bind_all("<MouseWheel>", lambda event: self._on_mousewheel(event, canvas))
+        self.bind_all("<MouseWheel>", lambda event: self._on_mousewheel(event, canvas, h_scroll))
 
+        # Pack scrollbars before canvas so they aren't clipped if the frame gets too small
+        v_scrollbar.pack(side="right", fill="y")
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
 
-    def _on_mousewheel(self, event, canvas):
+    def _on_mousewheel(self, event, canvas, h_scroll):
         # On Windows, the delta is usually a multiple of 120
-        canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        # If Shift is held, scroll horizontally
+        if event.state & 0x0001 and h_scroll:  # Shift key mask
+            canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
+        else:
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 
 class RoundedStringVar(tk.StringVar):
