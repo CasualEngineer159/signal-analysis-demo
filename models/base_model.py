@@ -52,6 +52,10 @@ class BaseComponentModel(ABC):
         filtered_params = {k: v for k, v in param_config.items() if k in known_fields}
         return cls(**filtered_params)
 
+    def get_anomaly_times(self) -> list[float]:
+        """Returns a list of specific times where this component introduces an anomaly/change."""
+        return []
+
 @dataclass
 class SignalComponentModel(BaseComponentModel):
     """Base for models that generate a primary signal."""

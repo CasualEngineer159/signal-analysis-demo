@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis import perform_fft, perform_stft
+from analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection
 
 class TestAnalysisFunctions(unittest.TestCase):
     """Unit tests for the signal analysis functions."""
@@ -76,6 +76,119 @@ class TestAnalysisFunctions(unittest.TestCase):
             self.assertEqual(Zxx.shape[0], len(y_short) // 2 + 1)
         except Exception as e:
             self.fail(f"STFT raised an exception with a large window: {e}")
+
+    def test_spectral_flux_nominal(self):
+        """Test calculate_spectral_flux with a distinct anomaly (peak)."""
+        # Create a mock STFT magnitude matrix (frequencies x time)
+        # Background noise level of 1.0
+        Zxx = np.ones((10, 20))
+        t_stft = np.linspace(0, 1.0, 20)
+        
+        # Inject an anomaly at time index 10 (across all frequencies)
+        Zxx[:, 10] = 100.0
+        
+        flux, peak_times = calculate_spectral_flux(Zxx, t_stft)
+        
+        # Flux array length should match time array length
+        self.assertEqual(len(flux), len(t_stft))
+        
+        # Should detect exactly one peak
+        self.assertEqual(len(peak_times), 1)
+        
+        # The peak time should match the injected anomaly time index (10)
+        self.assertEqual(peak_times[0], t_stft[10])
+
+    def test_spectral_flux_edge_case_empty(self):
+        """Test calculate_spectral_flux with empty arrays."""
+        Zxx_empty = np.array([[]])
+        t_empty = np.array([])
+        
+        flux, peak_times = calculate_spectral_flux(Zxx_empty, t_empty)
+        
+        self.assertEqual(len(flux), 0)
+        self.assertEqual(len(peak_times), 0)
+
+    def test_spectral_flux_edge_case_uniform(self):
+        """Test calculate_spectral_flux with a perfectly uniform matrix to test the MAD fallback logic."""
+        # A perfectly clean/flat signal yields a uniform matrix
+        Zxx_uniform = np.full((10, 20), 5.0)
+        t_stft = np.linspace(0, 1.0, 20)
+        
+        # Since it's uniform, the difference between columns is zero
+        # MAD will be 0.0, which triggers the fallback threshold logic to prevent false positives.
+        flux, peak_times = calculate_spectral_flux(Zxx_uniform, t_stft)
+        
+        # Flux should be all zeros
+        self.assertTrue(np.all(flux == 0.0))
+        
+        # No peaks should be detected because the threshold fallback requires exceeding max(flux)*0.1
+        self.assertEqual(len(peak_times), 0)
+
+    def test_evaluate_detection_perfect_match(self):
+        gt = [1.0, 2.0, 3.0]
+        pred = [1.0, 2.05, 2.95]
+        res = evaluate_detection(gt, pred, tolerance=0.1)
+        self.assertEqual(res['TP'], 3)
+        self.assertEqual(res['FP'], 0)
+        self.assertEqual(res['FN'], 0)
+        self.assertEqual(res['Precision'], 1.0)
+        self.assertEqual(res['Recall'], 1.0)
+        self.assertEqual(res['F1-Score'], 1.0)
+
+    def test_evaluate_detection_false_positives(self):
+        gt = [1.0]
+        pred = [1.0, 2.0, 3.0]
+        res = evaluate_detection(gt, pred, tolerance=0.1)
+        self.assertEqual(res['TP'], 1)
+        self.assertEqual(res['FP'], 2)
+        self.assertEqual(res['FN'], 0)
+        self.assertAlmostEqual(res['Precision'], 1/3)
+        self.assertEqual(res['Recall'], 1.0)
+
+    def test_evaluate_detection_false_negatives(self):
+        gt = [1.0, 2.0, 3.0]
+        pred = [2.0]
+        res = evaluate_detection(gt, pred, tolerance=0.1)
+        self.assertEqual(res['TP'], 1)
+        self.assertEqual(res['FP'], 0)
+        self.assertEqual(res['FN'], 2)
+        self.assertEqual(res['Precision'], 1.0)
+        self.assertAlmostEqual(res['Recall'], 1/3)
+
+    def test_evaluate_detection_tolerance(self):
+        gt = [1.0]
+        # Prediction is outside the 0.1 tolerance
+        pred = [1.2]
+        res = evaluate_detection(gt, pred, tolerance=0.1)
+        self.assertEqual(res['TP'], 0)
+        self.assertEqual(res['FP'], 1)
+        self.assertEqual(res['FN'], 1)
+
+        # Now with a larger tolerance
+        res_large_tol = evaluate_detection(gt, pred, tolerance=0.3)
+        self.assertEqual(res_large_tol['TP'], 1)
+        self.assertEqual(res_large_tol['FP'], 0)
+        self.assertEqual(res_large_tol['FN'], 0)
+
+    def test_evaluate_detection_empty_inputs(self):
+        # Empty predictions
+        res1 = evaluate_detection([1.0], [])
+        self.assertEqual(res1['TP'], 0)
+        self.assertEqual(res1['FN'], 1)
+        self.assertEqual(res1['FP'], 0)
+
+        # Empty ground truth
+        res2 = evaluate_detection([], [1.0])
+        self.assertEqual(res2['TP'], 0)
+        self.assertEqual(res2['FN'], 0)
+        self.assertEqual(res2['FP'], 1)
+
+        # Both empty
+        res3 = evaluate_detection([], [])
+        self.assertEqual(res3['TP'], 0)
+        self.assertEqual(res3['FN'], 0)
+        self.assertEqual(res3['FP'], 0)
+        self.assertEqual(res3['F1-Score'], 0.0)
 
 if __name__ == '__main__':
     unittest.main()

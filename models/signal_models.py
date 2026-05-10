@@ -98,3 +98,6 @@ class SineVaryingFreqModel(SignalComponentModel):
 
     def get_max_freq(self) -> float:
         return max(self.start_freq, self.end_freq)
+
+    def get_anomaly_times(self) -> list[float]:
+        return [self.change_time]

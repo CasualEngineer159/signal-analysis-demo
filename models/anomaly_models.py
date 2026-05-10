@@ -31,6 +31,9 @@ class ImpulseNoiseModel(AnomalyComponentModel):
             y_out[impulse_idx] += self.amplitude
         return y_out
 
+    def get_anomaly_times(self) -> list[float]:
+        return [self.impulse_time]
+
 @dataclass
 class AmplitudeJumpModel(AnomalyComponentModel):
     """Model for an amplitude jump."""
@@ -46,6 +49,9 @@ class AmplitudeJumpModel(AnomalyComponentModel):
         jump_idx = np.searchsorted(t, actual_time, side='right')
         y_out[jump_idx:] += self.jump_size
         return y_out
+
+    def get_anomaly_times(self) -> list[float]:
+        return [self.jump_time]
 
 @dataclass
 class BiasModel(AnomalyComponentModel):
@@ -83,6 +89,9 @@ class DropoutModel(AnomalyComponentModel):
         y_out[start_idx:end_idx] = 0
         return y_out
 
+    def get_anomaly_times(self) -> list[float]:
+        return [self.start_time]
+
 @dataclass
 class SaturationModel(AnomalyComponentModel):
     """Model for signal saturation."""
@@ -110,6 +119,9 @@ class OutlierModel(AnomalyComponentModel):
         if 0 <= outlier_idx < len(y_out):
             y_out[outlier_idx] = self.value
         return y_out
+
+    def get_anomaly_times(self) -> list[float]:
+        return [self.outlier_time]
 
 @dataclass
 class TimeDelayModel(AnomalyComponentModel):
@@ -139,3 +151,6 @@ class TimeDelayModel(AnomalyComponentModel):
         y_out = np.roll(y_in, delay_samples)
         y_out[:delay_samples] = 0
         return y_out
+
+    def get_anomaly_times(self) -> list[float]:
+        return [self.delay]

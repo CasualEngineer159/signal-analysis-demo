@@ -78,7 +78,13 @@ def create_slider_entry(parent, label, var, from_, to, command):
         try:
             # FIX: Replace comma with period to handle different locales
             value_str = string_var.get().replace(',', '.')
-            var.set(float(value_str))
+            parsed_val = float(value_str)
+            # Enforce limits on text entry
+            if parsed_val < from_:
+                parsed_val = from_
+            elif parsed_val > to:
+                parsed_val = to
+            var.set(parsed_val)
         except (ValueError, TypeError):
             pass
 
@@ -97,6 +103,7 @@ def create_slider_entry(parent, label, var, from_, to, command):
 
     def on_entry_focus_out(event):
         string_var.is_editing = False
+        # Update the string variable to reflect the clamped value
         string_var.set(var.get())
         command()
 

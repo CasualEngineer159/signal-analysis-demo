@@ -1,9 +1,9 @@
 {
     "ui_settings": {
-        "periods": 80.0,
+        "periods": 50.0,
         "duration_seconds": 2.0,
-        "stft_window_size": 200,
-        "stft_overlap": 150,
+        "stft_window_size": 500,
+        "stft_overlap_percent": 75.0,
         "stft_window_type": "hann"
     },
     "components": [
@@ -40,9 +40,16 @@
         {
             "type": "Sine",
             "params": {
-                "amplitude": 0.2,
+                "amplitude": 0.1,
                 "frequency": 50.0,
                 "phase": 0.0
+            }
+        },
+        {
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 0.01,
+                "seed": 5501
             }
         }
     ]

@@ -106,3 +106,48 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray) -> tuple[np.nda
     peak_times = t_stft[peaks]
     
     return flux, peak_times
+
+def evaluate_detection(ground_truth_times: list[float], predicted_times: list[float], tolerance: float = 0.1) -> dict:
+    """
+    Evaluates anomaly detection performance.
+
+    Args:
+        ground_truth_times (list[float]): The actual times anomalies occurred.
+        predicted_times (list[float]): The times anomalies were predicted.
+        tolerance (float): The maximum time difference to consider a match valid.
+
+    Returns:
+        dict: A dictionary containing TP, FP, FN, Precision, Recall, and F1-Score.
+    """
+    tp = 0
+    fp = 0
+    fn = 0
+    
+    matched_predictions = set()
+    
+    for gt in ground_truth_times:
+        # Find all predictions within tolerance
+        valid_preds = [i for i, p in enumerate(predicted_times) if abs(p - gt) <= tolerance and i not in matched_predictions]
+        
+        if valid_preds:
+            # Pick the closest one
+            closest_pred_idx = min(valid_preds, key=lambda i: abs(predicted_times[i] - gt))
+            matched_predictions.add(closest_pred_idx)
+            tp += 1
+        else:
+            fn += 1
+            
+    fp = len(predicted_times) - len(matched_predictions)
+    
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    
+    return {
+        'TP': tp,
+        'FP': fp,
+        'FN': fn,
+        'Precision': precision,
+        'Recall': recall,
+        'F1-Score': f1_score
+    }
