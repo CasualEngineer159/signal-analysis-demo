@@ -1,0 +1,42 @@
+{
+    "ui_settings": {
+        "periods": 5.0,
+        "duration_seconds": 2.0,
+        "stft_window_size": 256,
+        "stft_overlap": 128,
+        "stft_window_type": "hann"
+    },
+    "components": [
+        {
+            "type": "Sine",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 5.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "type": "Square",
+            "params": {
+                "amplitude": 2.66,
+                "frequency": 24.07,
+                "phase": 83.65,
+                "duty_cycle": 0.5
+            }
+        },
+        {
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 0.1,
+                "seed": 12345
+            }
+        },
+        {
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 0.75,
+                "duration": 0.5
+            }
+        }
+    ]
+}

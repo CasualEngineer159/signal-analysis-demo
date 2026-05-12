@@ -31,23 +31,20 @@ def find_fft_peaks(xf: np.ndarray, amplitude: np.ndarray) -> tuple[np.ndarray, n
     if amplitude.size == 0 or len(xf) == 0:
         return np.array([]), np.array([])
 
-    # 1. ŘEŠENÍ VÝŠKY: Práh nastavíme relativně k nejvyššímu peaku
-    # (Např. peak musí mít alespoň 5 % amplitudy toho absolutně nejvyššího)
-    # Alternativně lze použít: threshold = np.percentile(amplitude, 95)
-    threshold = 0.05
+    # 1. Dynamic Threshold: Set height relative to the max amplitude.
+    # This ensures that peaks are found regardless of the overall signal strength.
+    max_amp = np.max(amplitude) if amplitude.size > 0 else 0
+    threshold = max_amp * 0.05
 
-    # 2. ŘEŠENÍ PROMINENCE: Použijeme malou, ale fixní prominenci.
-    # U FFT nás zajímají i malé peaky (jako tvých 50 Hz),
-    # ale nechceme úplný šum.
-    prominence = 0.05
+    # 2. Dynamic Prominence: Also set prominence relative to the max amplitude.
+    # This helps to avoid detecting noisy peaks in a strong signal.
+    prominence = max_amp * 0.05
 
-    # 3. ŘEŠENÍ VZDÁLENOSTI: Parametr 'distance' v počtech indexů (binů).
-    # Pokud máš např. rozlišení 1 Hz na bin, distance=3 znamená,
-    # že dva peaky nesmí být blíž než 3 Hz od sebe.
-    # Vybere to vždy jen ten nejvyšší z daného kopečku.
+    # 3. Distance: Minimum distance between peaks in samples (bins).
+    # This prevents detecting multiple peaks on the same spectral feature.
     min_distance_bins = 5
 
-    # Hledání s novými parametry
+    # Find peaks with the dynamic parameters
     peaks, _ = find_peaks(
         amplitude,
         height=threshold,

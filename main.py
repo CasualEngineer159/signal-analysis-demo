@@ -105,10 +105,12 @@ class SignalGeneratorApp:
         io_frame.pack(fill=tk.X, pady=(10, 5))
         btn_frame = ttk.Frame(io_frame)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        clear_btn = ttk.Button(btn_frame, text="Clear All", command=self.clear_all)
+        clear_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
         save_btn = ttk.Button(btn_frame, text="Save Config", command=self.save_configuration)
         save_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
         load_btn = ttk.Button(btn_frame, text="Load Config", command=self.load_configuration)
-        load_btn.pack(side=tk.RIGHT, expand=True, fill=tk.X, padx=(5, 0))
+        load_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 0))
 
     def setup_preview_panel(self, parent):
         preview_frame = ttk.LabelFrame(parent, text="Component Preview")
@@ -139,6 +141,23 @@ class SignalGeneratorApp:
         self.pipeline_panel.add_to_listbox(controller)
         self.update_plot()
         return controller
+
+    def clear_all(self):
+        self.controllers.clear()
+        self.pipeline_panel.clear_listbox()
+
+        # Reset settings to default
+        self.settings_panel.periods.set(5.0)
+        self.settings_panel.duration_seconds.set(2.0)
+        self.settings_panel.stft_window_size.set(256)
+        self.settings_panel.stft_overlap_percent.set(75.0)
+        self.settings_panel.stft_window_type.set('hann')
+        
+        # Update STFT params in settings panel from the new values
+        self.settings_panel.on_stft_params_changed()
+
+        # Refresh plots
+        self.update_plot()
 
     def save_configuration(self):
         filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
