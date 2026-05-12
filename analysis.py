@@ -26,6 +26,40 @@ def perform_fft(y: np.ndarray, fs: float) -> tuple[np.ndarray, np.ndarray]:
     
     return xf, amplitude
 
+
+def find_fft_peaks(xf: np.ndarray, amplitude: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    if amplitude.size == 0 or len(xf) == 0:
+        return np.array([]), np.array([])
+
+    # 1. ŘEŠENÍ VÝŠKY: Práh nastavíme relativně k nejvyššímu peaku
+    # (Např. peak musí mít alespoň 5 % amplitudy toho absolutně nejvyššího)
+    # Alternativně lze použít: threshold = np.percentile(amplitude, 95)
+    threshold = 0.05
+
+    # 2. ŘEŠENÍ PROMINENCE: Použijeme malou, ale fixní prominenci.
+    # U FFT nás zajímají i malé peaky (jako tvých 50 Hz),
+    # ale nechceme úplný šum.
+    prominence = 0.05
+
+    # 3. ŘEŠENÍ VZDÁLENOSTI: Parametr 'distance' v počtech indexů (binů).
+    # Pokud máš např. rozlišení 1 Hz na bin, distance=3 znamená,
+    # že dva peaky nesmí být blíž než 3 Hz od sebe.
+    # Vybere to vždy jen ten nejvyšší z daného kopečku.
+    min_distance_bins = 5
+
+    # Hledání s novými parametry
+    peaks, _ = find_peaks(
+        amplitude,
+        height=threshold,
+        prominence=prominence,
+        distance=min_distance_bins
+    )
+
+    peak_freqs = xf[peaks]
+    peak_amps = amplitude[peaks]
+
+    return peak_freqs, peak_amps
+
 def perform_stft(y: np.ndarray, fs: float, window_type: str, nperseg: int, noverlap: int) -> tuple:
     """
     Performs a Short-Time Fourier Transform on a given signal.
@@ -100,9 +134,10 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray) -> tuple[np.nda
         mad_flux = np.max(flux) * 0.1
 
     # Práh nastavíme na medián + N-násobek MAD (např. 5x až 10x)
-    threshold = median_flux + 10 * mad_flux
+    threshold = median_flux + 3 * mad_flux
 
-    peaks, _ = find_peaks(flux, height=threshold)
+    # (Original threshold calculation is not used directly, standardizing on find_peaks argument if needed later)
+    peaks, _ = find_peaks(flux, height=threshold, prominence=0.3)
     peak_times = t_stft[peaks]
     
     return flux, peak_times

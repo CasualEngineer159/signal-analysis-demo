@@ -34,6 +34,21 @@ class PlotManager:
         self.fft_canvas = FigureCanvasTkAgg(self.fft_fig, master=fft_frame)
         self.fft_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
+        # FFT Peaks Results Table
+        self.fft_results_frame = ttk.LabelFrame(right_graphs, text="FFT Peaks")
+        self.fft_results_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 5), padx=5)
+        
+        fft_columns = ("Frequency [Hz]", "Amplitude")
+        self.fft_results_table = ttk.Treeview(self.fft_results_frame, columns=fft_columns, show="headings", height=3)
+        for col in fft_columns:
+            self.fft_results_table.heading(col, text=col)
+            self.fft_results_table.column(col, width=120, anchor=tk.CENTER)
+            
+        fft_scrollbar = ttk.Scrollbar(self.fft_results_frame, orient=tk.VERTICAL, command=self.fft_results_table.yview)
+        self.fft_results_table.configure(yscrollcommand=fft_scrollbar.set)
+        fft_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.fft_results_table.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
         # Detection Results Table
         self.results_frame = ttk.LabelFrame(right_graphs, text="Detection Results")
         self.results_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 5), padx=5)
@@ -68,7 +83,7 @@ class PlotManager:
             value_label.grid(row=row, column=col+1, padx=5, pady=2, sticky=tk.W)
             self.eval_labels[metric] = value_label
 
-    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, ground_truth_times=None, evaluation_metrics=None):
+    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None):
         self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear(); self.flux_ax.clear()
 
         # Time-Domain Plot
@@ -105,6 +120,14 @@ class PlotManager:
         
         # FFT Plot
         self.fft_ax.plot(xf, yf)
+        if fft_peak_freqs is not None and fft_peak_amps is not None:
+            for i, (freq, amp) in enumerate(zip(fft_peak_freqs, fft_peak_amps)):
+                self.fft_ax.axvline(x=freq, color='red', linestyle='--', alpha=0.7, label='Detected Peak' if i == 0 else "")
+                self.fft_ax.plot(freq, amp, "rx")
+            
+            if len(fft_peak_freqs) > 0:
+                self.fft_ax.legend(loc='upper right', fontsize='small')
+
         self.fft_ax.set_title("FFT Spectrum")
         self.fft_ax.set_xlabel("Frequency [Hz]")
         self.fft_ax.set_ylabel("Amplitude")
@@ -112,6 +135,12 @@ class PlotManager:
         self.fft_ax.set_xlim(0, max_freq * 2 if max_freq > 0 else 100)
         self.fft_fig.tight_layout()
         self.fft_canvas.draw()
+
+        # Update FFT Results Table
+        self.fft_results_table.delete(*self.fft_results_table.get_children())
+        if fft_peak_freqs is not None and fft_peak_amps is not None:
+            for freq, amp in zip(fft_peak_freqs, fft_peak_amps):
+                self.fft_results_table.insert("", tk.END, values=(f"{freq:.3f}", f"{amp:.3f}"))
 
         # Update Results Table
         self.results_table.delete(*self.results_table.get_children())

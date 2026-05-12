@@ -214,7 +214,8 @@ class SignalGeneratorApp:
             self.plot_manager.draw_plots(
                 duration, max_freq, result.fs, result.t, result.y, result.t_ext, result.y_ext,
                 result.t_stft_ext, result.f, result.Zxx_ext, result.t_stft_core, result.flux,
-                result.peak_times, result.xf, result.yf, result.ground_truth_times, result.evaluation_metrics
+                result.peak_times, result.xf, result.yf, result.ground_truth_times, result.evaluation_metrics,
+                result.fft_peak_freqs, result.fft_peak_amps
             )
 
             # Preview Plot

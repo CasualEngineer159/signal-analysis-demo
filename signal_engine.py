@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass, field
-from analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection
+from analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection, find_fft_peaks
 
 @dataclass
 class PipelineResult:
@@ -17,6 +17,8 @@ class PipelineResult:
     peak_times: np.ndarray
     xf: np.ndarray
     yf: np.ndarray
+    fft_peak_freqs: np.ndarray
+    fft_peak_amps: np.ndarray
     ground_truth_times: list[float] = field(default_factory=list)
     evaluation_metrics: dict = field(default_factory=dict)
 
@@ -64,6 +66,7 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
 
     # FFT Plot
     xf, yf = perform_fft(y, fs)
+    fft_peak_freqs, fft_peak_amps = find_fft_peaks(xf, yf)
 
     return PipelineResult(
         fs=fs,
@@ -79,6 +82,8 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
         peak_times=peak_times,
         xf=xf,
         yf=yf,
+        fft_peak_freqs=fft_peak_freqs,
+        fft_peak_amps=fft_peak_amps,
         ground_truth_times=ground_truth_times,
         evaluation_metrics=evaluation_metrics
     )
