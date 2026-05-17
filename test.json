@@ -1,42 +1,71 @@
 {
     "ui_settings": {
-        "periods": 5.0,
-        "duration_seconds": 2.0,
+        "periods": 50.0,
+        "duration_seconds": 6.0,
         "stft_window_size": 256,
-        "stft_overlap": 128,
+        "stft_overlap_percent": 50.0,
         "stft_window_type": "hann"
     },
     "components": [
         {
+            "//": "1. SINE 10Hz: We want this from 0 to 2s, so we drop it out from 2s to 6s.",
             "type": "Sine",
             "params": {
                 "amplitude": 1.0,
-                "frequency": 5.0,
+                "frequency": 10.0,
                 "phase": 0.0
-            }
-        },
-        {
-            "type": "Square",
-            "params": {
-                "amplitude": 2.66,
-                "frequency": 24.07,
-                "phase": 83.65,
-                "duty_cycle": 0.5
-            }
-        },
-        {
-            "type": "Gaussian Noise",
-            "params": {
-                "std_dev": 0.1,
-                "seed": 12345
             }
         },
         {
             "type": "Signal Dropout",
             "params": {
-                "start_time": 0.75,
-                "duration": 0.5
+                "start_time": 2.0,
+                "duration": 4.0
+            }
+        },
+
+        {
+            "//": "2. CHIRP: Sweeps 0 to 30Hz over 6s. We only want the 2s to 4s window (10Hz-20Hz). Drop out the rest.",
+            "type": "Chirp",
+            "params": {
+                "amplitude": 1.0,
+                "start_freq": 0.0,
+                "end_freq": 30.0
+            }
+        },
+        {
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 0.0,
+                "duration": 2.0
+            }
+        },
+        {
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 4.0,
+                "duration": 2.0
+            }
+        },
+
+        {
+            "//": "3. SINE 20Hz: We want this from 4 to 6s, so we drop it out from 0 to 4s.",
+            "type": "Sine",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 20.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 0.0,
+                "duration": 4.0
             }
         }
-    ]
+    ],
+    "spectral_flux": {
+        "rectify": true
+    }
 }

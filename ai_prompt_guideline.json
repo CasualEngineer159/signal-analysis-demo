@@ -1,0 +1,138 @@
+{
+    "//": "This is a commented guideline and a working example for a generative AI to create signal scenarios. The application can load this file. Each component is listed with example parameters.",
+    "ui_settings": {
+        "//": "Global settings for signal generation and analysis.",
+        "periods": 50.0,
+        "//_periods": "Legacy setting, can be ignored.",
+        "duration_seconds": 5.0,
+        "//_duration_seconds": "Total duration of the signal in seconds.",
+        "stft_window_size": 256,
+        "//_stft_window_size": "STFT window size. Powers of 2 are common.",
+        "stft_overlap_percent": 50.0,
+        "//_stft_overlap_percent": "STFT window overlap percentage.",
+        "stft_window_type": "hann",
+        "//_stft_window_type": "STFT window function. Options: ['hann', 'hamming', 'blackman', 'bartlett', 'boxcar']."
+    },
+    "components": [
+        {
+            "//": "A sine wave. This is a fundamental building block.",
+            "type": "Sine",
+            "params": {
+                "amplitude": 1.0,
+                "frequency": 10.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "//": "A cosine wave, which is a sine wave with a 90-degree phase shift.",
+            "type": "Cosine",
+            "params": {
+                "amplitude": 0.5,
+                "frequency": 20.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "//": "A square wave. Note the duty_cycle parameter.",
+            "type": "Square",
+            "params": {
+                "amplitude": 0.5,
+                "frequency": 5.0,
+                "phase": 0.0,
+                "duty_cycle": 0.5
+            }
+        },
+        {
+            "//": "A chirp signal with linearly increasing frequency.",
+            "type": "Chirp",
+            "params": {
+                "amplitude": 0.5,
+                "start_freq": 5.0,
+                "end_freq": 25.0
+            }
+        },
+        {
+            "//": "A sine wave that abruptly changes frequency. This is a non-stationary event.",
+            "type": "Sine (Varying Freq)",
+            "params": {
+                "amplitude": 1.0,
+                "start_freq": 30.0,
+                "end_freq": 60.0,
+                "change_time": 1.0
+            }
+        },
+        {
+            "//": "Adds random noise from a Gaussian distribution.",
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 0.1,
+                "seed": 42
+            }
+        },
+        {
+            "//": "Adds a single, sharp spike (impulse) to the signal.",
+            "type": "Impulse Noise",
+            "params": {
+                "amplitude": 5.0,
+                "impulse_time": 1.5
+            }
+        },
+        {
+            "//": "A sudden, sustained jump in the signal's amplitude.",
+            "type": "Amplitude Jump",
+            "params": {
+                "jump_size": 2.0,
+                "jump_time": 2.0
+            }
+        },
+        {
+            "//": "Adds a constant DC offset to the entire signal.",
+            "type": "Bias",
+            "params": {
+                "offset": 0.5
+            }
+        },
+        {
+            "//": "Adds a linear trend (drift) to the signal.",
+            "type": "Drift",
+            "params": {
+                "slope": 0.2
+            }
+        },
+        {
+            "//": "Causes the signal to drop to zero for a specified duration.",
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 2.5,
+                "duration": 0.2
+            }
+        },
+        {
+            "//": "Clips the signal's amplitude at a given threshold.",
+            "type": "Saturation",
+            "params": {
+                "threshold": 1.2
+            }
+        },
+        {
+            "//": "Replaces a single data point with an extreme value.",
+            "type": "Outlier",
+            "params": {
+                "value": 10.0,
+                "outlier_time": 3.0
+            }
+        },
+        {
+            "//": "Shifts the signal in time by introducing a delay.",
+            "type": "Time Delay",
+            "params": {
+                "delay": 0.1
+            }
+        }
+    ],
+    "spectral_flux": {
+        "//": "Settings for the Spectral Flux anomaly detection.",
+        "rectify": true,
+        "//_rectify": "Half-wave rectification can improve detection of energy increases."
+    }
+}
