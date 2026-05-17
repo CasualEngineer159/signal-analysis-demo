@@ -240,6 +240,7 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
         
     def test_dropout_model(self):
+        # Test the generation logic
         model = DropoutModel(start_time=0.5, duration=0.5)
         y_in_test = np.ones(100)
         t_test = np.linspace(0, 1, 100)
@@ -251,7 +252,17 @@ class TestSignalModel(unittest.TestCase):
         y_out_zero = model_zero_dur.generate(t_test, y_in_test)
         np.testing.assert_array_equal(y_out_zero, y_in_test)
         
-        self.assertEqual(model.get_anomaly_times(), [0.5])
+        # Test the intelligent ground truth reporting
+        # Case 1: Duration is longer than tolerance, expect two times
+        long_dropout = DropoutModel(start_time=0.5, duration=0.5)
+        self.assertEqual(long_dropout.get_anomaly_times(tolerance=0.1), [0.5, 1.0])
+
+        # Case 2: Duration is shorter than tolerance, expect one time
+        short_dropout = DropoutModel(start_time=0.5, duration=0.05)
+        self.assertEqual(short_dropout.get_anomaly_times(tolerance=0.1), [0.5])
+        
+        # Case 3: Default behavior without tolerance (should return both)
+        self.assertEqual(long_dropout.get_anomaly_times(), [0.5, 1.0])
 
         self._test_serialization_roundtrip(model)
 

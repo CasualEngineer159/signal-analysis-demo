@@ -50,16 +50,21 @@ class PlotManager:
         self.fft_results_table.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Detection Results Table
-        self.results_frame = ttk.LabelFrame(right_graphs, text="Detection Results")
+        self.results_frame = ttk.LabelFrame(right_graphs, text="Spectral Flux Results")
         self.results_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 5), padx=5)
         
         # Setup Treeview inside the frame
-        columns = ("Algorithm", "Detected", "Time [s]")
+        columns = ("Ground Truth Time [s]", "Detected Time [s]")
         self.results_table = ttk.Treeview(self.results_frame, columns=columns, show="headings", height=5)
         
         for col in columns:
             self.results_table.heading(col, text=col)
-            self.results_table.column(col, width=120, anchor=tk.CENTER)
+            self.results_table.column(col, width=150, anchor=tk.CENTER)
+            
+        # Configure tags for coloring rows
+        self.results_table.tag_configure('tp', background='#d5f5d5') # Light Green
+        self.results_table.tag_configure('fp', background='#f5d5d5') # Light Red
+        self.results_table.tag_configure('fn', background='#f5e8d5') # Light Brown/Tan
             
         # Add scrollbar
         scrollbar = ttk.Scrollbar(self.results_frame, orient=tk.VERTICAL, command=self.results_table.yview)
@@ -74,24 +79,33 @@ class PlotManager:
         
         self.eval_labels = {}
         metrics = ['TP', 'FP', 'FN', 'Precision', 'Recall', 'F1-Score']
+        colors = {'TP': 'green', 'FP': 'red', 'FN': '#A0522D'} # Using hex for brown
         
         for i, metric in enumerate(metrics):
             row = i // 3
             col = (i % 3) * 2
-            ttk.Label(self.eval_frame, text=f"{metric}:").grid(row=row, column=col, padx=(10 if col > 0 else 0, 5), pady=2, sticky=tk.W)
+            
+            metric_label = ttk.Label(self.eval_frame, text=f"{metric}:")
+            metric_label.grid(row=row, column=col, padx=(10 if col > 0 else 0, 5), pady=2, sticky=tk.W)
+            
             value_label = ttk.Label(self.eval_frame, text="-")
             value_label.grid(row=row, column=col+1, padx=5, pady=2, sticky=tk.W)
+            
+            if metric in colors:
+                metric_label.config(foreground=colors[metric])
+                value_label.config(foreground=colors[metric])
+                
             self.eval_labels[metric] = value_label
 
-    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None):
+    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None, matched_pairs=None):
         self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear(); self.flux_ax.clear()
 
         # Time-Domain Plot
         self.ax.plot(t, y)
         self.ax.set_title("Time-Domain Signal")
         self.ax.set_ylabel("Amplitude")
-        self.ax.set_xlim(0, duration) # Force strict limits
         self.ax.grid(True)
+        self.ax.set_xlim(0, duration) # Force strict limits
 
         # 1. Plot the EXTENDED STFT. This prevents any white gaps on the edges because 
         # Matplotlib's xlim will visually crop it perfectly to the axis boundaries.
@@ -104,10 +118,9 @@ class PlotManager:
         # Spectral Flux Plot calculated ONLY on clean core data
         if len(flux) > 0:
             self.flux_ax.plot(t_stft_core, flux, color='purple')
-            for i, peak_time in enumerate(peak_times):
-                self.flux_ax.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
-            
-            if len(peak_times) > 0:
+            if peak_times is not None and len(peak_times) > 0:
+                for i, peak_time in enumerate(peak_times):
+                    self.flux_ax.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
                 self.flux_ax.legend(loc='upper right', fontsize='small')
                 
         self.flux_ax.set_xlabel("Time [s]")
@@ -144,28 +157,18 @@ class PlotManager:
 
         # Update Results Table
         self.results_table.delete(*self.results_table.get_children())
-        self.results_table.insert("", tk.END, values=("FFT Global", "Yes" if len(yf) > 0 and np.max(yf) > 0 else "No", "N/A"))
-        
-        if len(peak_times) > 0:
-            peak_str = ", ".join([f"{pt:.3f}" for pt in peak_times])
-            detected_str = "Yes"
-        else:
-            peak_str = "N/A"
-            detected_str = "No"
-            
-        self.results_table.insert("", tk.END, values=("STFT Spectral Flux", detected_str, peak_str))
-        
-        # Add Ground Truth Times to the Results Table
-        if ground_truth_times is not None:
-            if len(ground_truth_times) > 0:
-                gt_str = ", ".join([f"{pt:.3f}" for pt in ground_truth_times])
-                gt_detected = "Yes"
-            else:
-                gt_str = "N/A"
-                gt_detected = "No"
-                
-            self.results_table.insert("", tk.END, values=("Ground Truth (Actual)", gt_detected, gt_str))
+        if matched_pairs:
+            for gt_time, pred_time in matched_pairs:
+                if gt_time is not None and pred_time is not None:
+                    tag = 'tp'
+                elif gt_time is None:
+                    tag = 'fp'
+                else: # pred_time is None
+                    tag = 'fn'
 
+                gt_str = f"{gt_time:.3f}" if gt_time is not None else "---"
+                pred_str = f"{pred_time:.3f}" if pred_time is not None else "---"
+                self.results_table.insert("", tk.END, values=(gt_str, pred_str), tags=(tag,))
         
         # Update Evaluation Metrics
         if evaluation_metrics:
@@ -178,3 +181,6 @@ class PlotManager:
                         label.config(text=str(val))
                 else:
                     label.config(text="-")
+        else: # Clear labels if no metrics
+            for label in self.eval_labels.values():
+                label.config(text="-")

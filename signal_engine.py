@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass, field
-from analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection, find_fft_peaks
+from analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection, find_fft_peaks, get_matched_pairs
 
 @dataclass
 class PipelineResult:
@@ -21,6 +21,15 @@ class PipelineResult:
     fft_peak_amps: np.ndarray
     ground_truth_times: list[float] = field(default_factory=list)
     evaluation_metrics: dict = field(default_factory=dict)
+    matched_pairs: list[tuple[float | None, float | None]] = field(default_factory=list)
+
+def _calculate_tolerance(fs, stft_window_size, stft_overlap):
+    """Calculates the detection tolerance based on the STFT hop size."""
+    hop_size = stft_window_size - stft_overlap
+    # Ensure hop_size is at least 1 to avoid division by zero
+    if hop_size <= 0:
+        return 1 / fs
+    return hop_size / fs
 
 def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, stft_overlap, stft_window_type, rectify=False) -> PipelineResult:
     fs = max(1000, max_freq * 40)
@@ -33,12 +42,20 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
     
     y_ext = np.zeros_like(t_ext)
     
+    # Calculate tolerance before generating ground truth
+    tolerance = _calculate_tolerance(fs, stft_window_size, stft_overlap)
+
     ground_truth_times = []
     if len(t_ext) > 0:
         for controller in controllers:
             y_ext = controller.model.generate(t_ext, y_ext)
             if hasattr(controller.model, 'get_anomaly_times'):
-                ground_truth_times.extend(controller.model.get_anomaly_times())
+                # Pass tolerance to the method if it can accept it
+                try:
+                    gt_times = controller.model.get_anomaly_times(tolerance=tolerance)
+                except TypeError:
+                    gt_times = controller.model.get_anomaly_times()
+                ground_truth_times.extend(gt_times)
 
     # Core time vector for plotting standard Time-Domain and FFT
     t_core_idx = (t_ext >= 0) & (t_ext < duration)
@@ -60,9 +77,8 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
     flux, peak_times = calculate_spectral_flux(Zxx_core, t_stft_core, rectify=rectify)
     
     # Evaluate anomaly detection
-    # Default tolerance could be roughly 0.1 seconds, or dependent on window size
-    tolerance = (stft_window_size / fs) * 2  # Example adaptive tolerance
-    evaluation_metrics = evaluate_detection(ground_truth_times, peak_times.tolist(), tolerance=max(0.1, tolerance))
+    evaluation_metrics = evaluate_detection(ground_truth_times, peak_times.tolist(), tolerance=tolerance)
+    matched_pairs = get_matched_pairs(ground_truth_times, peak_times.tolist(), tolerance=tolerance)
 
     # FFT Plot
     xf, yf = perform_fft(y, fs)
@@ -85,5 +101,6 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
         fft_peak_freqs=fft_peak_freqs,
         fft_peak_amps=fft_peak_amps,
         ground_truth_times=ground_truth_times,
-        evaluation_metrics=evaluation_metrics
+        evaluation_metrics=evaluation_metrics,
+        matched_pairs=matched_pairs
     )

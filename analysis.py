@@ -135,7 +135,7 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray, rectify: bool =
 
     # Pokud je MAD nula (což se může stát u absolutně čistého signálu bez šumu), přidáme pojistku
     if mad_flux < 1e-6:
-        mad_flux = np.max(flux) * 0.1
+        mad_flux = np.max(flux) * 0.1 if np.max(flux) > 0 else 0.1
 
     # Práh nastavíme na medián + N-násobek MAD (např. 5x až 10x)
     threshold = median_flux + 3 * mad_flux
@@ -145,6 +145,94 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray, rectify: bool =
     peak_times = t_stft[peaks]
     
     return flux, peak_times
+
+def get_matched_pairs(ground_truth_times: list[float], predicted_times: list[float], tolerance: float = 0.1) -> list[tuple[float | None, float | None]]:
+    """
+    Matches ground truth times to predicted times within a tolerance, ensuring a one-to-one mapping.
+
+    Args:
+        ground_truth_times (list[float]): The actual times anomalies occurred.
+        predicted_times (list[float]): The times anomalies were predicted.
+        tolerance (float): The maximum time difference to consider a match valid.
+
+    Returns:
+        A list of tuples, where each tuple is a pair of (ground_truth, predicted) times.
+        If a time is unmatched, its corresponding pair will be None.
+    """
+    # Handle edge cases where one or both lists are empty
+    if not ground_truth_times and not predicted_times:
+        return []
+    if not ground_truth_times:
+        return sorted([(None, p) for p in predicted_times], key=lambda x: x[1])
+    if not predicted_times:
+        return sorted([(gt, None) for gt in ground_truth_times], key=lambda x: x[0])
+
+    gt_list = sorted(ground_truth_times)
+    pred_list = sorted(predicted_times)
+    
+    potential_matches = {} # key: gt_idx, value: list of (pred_idx, diff)
+    
+    # Step 1: Find all potential matches for each ground truth within tolerance
+    for i, gt in enumerate(gt_list):
+        for j, p in enumerate(pred_list):
+            diff = abs(gt - p)
+            if diff <= tolerance:
+                if i not in potential_matches:
+                    potential_matches[i] = []
+                potential_matches[i].append((j, diff))
+
+    # Step 2: Create a list of confirmed one-to-one matches
+    matches = [] # list of (gt_idx, pred_idx)
+    used_preds = set()
+
+    # Sort by ground truth index to process in order
+    for gt_idx in sorted(potential_matches.keys()):
+        # Sort this GT's potential matches by difference, smallest first
+        sorted_preds = sorted(potential_matches[gt_idx], key=lambda x: x[1])
+        
+        # Find the best, unused prediction for this ground truth
+        for pred_idx, diff in sorted_preds:
+            if pred_idx not in used_preds:
+                # This is a valid match. However, we must check if another GT
+                # could also claim this prediction with an even better score.
+                is_best_claim = True
+                for other_gt_idx in potential_matches:
+                    if other_gt_idx != gt_idx:
+                        for other_pred_idx, other_diff in potential_matches[other_gt_idx]:
+                            if other_pred_idx == pred_idx and other_diff < diff:
+                                is_best_claim = False
+                                break
+                    if not is_best_claim:
+                        break
+                
+                if is_best_claim:
+                    matches.append((gt_idx, pred_idx))
+                    used_preds.add(pred_idx)
+                    break # Move to the next ground truth
+
+    # Step 3: Build the final list of pairs
+    final_pairs = []
+    matched_gt_indices = {m[0] for m in matches}
+    matched_pred_indices = {m[1] for m in matches}
+
+    # Add the confirmed matches
+    for gt_idx, pred_idx in matches:
+        final_pairs.append((gt_list[gt_idx], pred_list[pred_idx]))
+
+    # Add unmatched ground truths (False Negatives)
+    for i in range(len(gt_list)):
+        if i not in matched_gt_indices:
+            final_pairs.append((gt_list[i], None))
+
+    # Add unmatched predictions (False Positives)
+    for i in range(len(pred_list)):
+        if i not in matched_pred_indices:
+            final_pairs.append((None, pred_list[i]))
+
+    # Sort the final list for a clean, chronological display
+    final_pairs.sort(key=lambda x: x[0] if x[0] is not None else x[1])
+    
+    return final_pairs
 
 def evaluate_detection(ground_truth_times: list[float], predicted_times: list[float], tolerance: float = 0.1) -> dict:
     """
@@ -158,25 +246,13 @@ def evaluate_detection(ground_truth_times: list[float], predicted_times: list[fl
     Returns:
         dict: A dictionary containing TP, FP, FN, Precision, Recall, and F1-Score.
     """
-    tp = 0
-    fp = 0
-    fn = 0
     
-    matched_predictions = set()
+    # Use the new matching logic to get TP, FP, FN
+    matched_pairs = get_matched_pairs(ground_truth_times, predicted_times, tolerance)
     
-    for gt in ground_truth_times:
-        # Find all predictions within tolerance
-        valid_preds = [i for i, p in enumerate(predicted_times) if abs(p - gt) <= tolerance and i not in matched_predictions]
-        
-        if valid_preds:
-            # Pick the closest one
-            closest_pred_idx = min(valid_preds, key=lambda i: abs(predicted_times[i] - gt))
-            matched_predictions.add(closest_pred_idx)
-            tp += 1
-        else:
-            fn += 1
-            
-    fp = len(predicted_times) - len(matched_predictions)
+    tp = sum(1 for gt, pred in matched_pairs if gt is not None and pred is not None)
+    fn = sum(1 for gt, pred in matched_pairs if gt is not None and pred is None)
+    fp = sum(1 for gt, pred in matched_pairs if gt is None and pred is not None)
     
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0

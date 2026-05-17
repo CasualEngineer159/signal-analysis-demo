@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection
+from analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection, get_matched_pairs
 
 class TestAnalysisFunctions(unittest.TestCase):
     """Unit tests for the signal analysis functions."""
@@ -189,6 +189,59 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(res3['FN'], 0)
         self.assertEqual(res3['FP'], 0)
         self.assertEqual(res3['F1-Score'], 0.0)
+
+    def test_get_matched_pairs(self):
+        """Test the get_matched_pairs function with various scenarios."""
+        
+        # Scenario 1: Perfect one-to-one match
+        gt1 = [1.0, 2.0]
+        pred1 = [1.05, 1.95]
+        pairs1 = get_matched_pairs(gt1, pred1, tolerance=0.1)
+        self.assertCountEqual(pairs1, [(1.0, 1.05), (2.0, 1.95)])
+
+        # Scenario 2: False Positive (extra prediction)
+        gt2 = [1.0]
+        pred2 = [1.05, 3.0]
+        pairs2 = get_matched_pairs(gt2, pred2, tolerance=0.1)
+        self.assertCountEqual(pairs2, [(1.0, 1.05), (None, 3.0)])
+
+        # Scenario 3: False Negative (missed ground truth)
+        gt3 = [1.0, 4.0]
+        pred3 = [1.05]
+        pairs3 = get_matched_pairs(gt3, pred3, tolerance=0.1)
+        self.assertCountEqual(pairs3, [(1.0, 1.05), (4.0, None)])
+
+        # Scenario 4: Tolerance test (one match, one miss)
+        gt4 = [1.0, 2.0]
+        pred4 = [1.05, 2.2] # 2.2 is outside tolerance
+        pairs4 = get_matched_pairs(gt4, pred4, tolerance=0.1)
+        self.assertCountEqual(pairs4, [(1.0, 1.05), (2.0, None), (None, 2.2)])
+
+        # Scenario 5: Complex case with a shared potential match
+        # The algorithm should correctly assign the closest pairs
+        gt5 = [1.0, 1.1]
+        pred5 = [1.06]
+        # 1.06 is closer to 1.1 than to 1.0.
+        pairs5 = get_matched_pairs(gt5, pred5, tolerance=0.1)
+        self.assertCountEqual(pairs5, [(1.1, 1.06), (1.0, None)])
+
+        # Scenario 6: The user's failing case
+        gt6 = [0.5, 1.0, 1.28, 1.5]
+        pred6 = [0.5, 1.062, 1.5, 1.625]
+        pairs6 = get_matched_pairs(gt6, pred6, tolerance=0.1)
+        # Expected: 1.28 is a miss (FN), 1.625 is a false alarm (FP)
+        self.assertCountEqual(pairs6, [
+            (0.5, 0.5),
+            (1.0, 1.062),
+            (1.5, 1.5),
+            (1.28, None),
+            (None, 1.625)
+        ])
+
+        # Scenario 7: Empty inputs
+        self.assertEqual(get_matched_pairs([], []), [])
+        self.assertEqual(get_matched_pairs([1.0], []), [(1.0, None)])
+        self.assertEqual(get_matched_pairs([], [1.0]), [(None, 1.0)])
 
 if __name__ == '__main__':
     unittest.main()

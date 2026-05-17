@@ -31,7 +31,7 @@ class ImpulseNoiseModel(AnomalyComponentModel):
             y_out[impulse_idx] += self.amplitude
         return y_out
 
-    def get_anomaly_times(self) -> list[float]:
+    def get_anomaly_times(self, **kwargs) -> list[float]:
         return [self.impulse_time]
 
 @dataclass
@@ -50,7 +50,7 @@ class AmplitudeJumpModel(AnomalyComponentModel):
         y_out[jump_idx:] += self.jump_size
         return y_out
 
-    def get_anomaly_times(self) -> list[float]:
+    def get_anomaly_times(self, **kwargs) -> list[float]:
         return [self.jump_time]
 
 @dataclass
@@ -89,8 +89,15 @@ class DropoutModel(AnomalyComponentModel):
         y_out[start_idx:end_idx] = 0
         return y_out
 
-    def get_anomaly_times(self) -> list[float]:
-        return [self.start_time]
+    def get_anomaly_times(self, tolerance: float = 0.0, **kwargs) -> list[float]:
+        """
+        Returns the ground truth times for the dropout.
+        If the dropout duration is less than the tolerance, only the start time is returned.
+        """
+        if self.duration > tolerance:
+            return [self.start_time, self.start_time + self.duration]
+        else:
+            return [self.start_time]
 
 @dataclass
 class SaturationModel(AnomalyComponentModel):
@@ -120,7 +127,7 @@ class OutlierModel(AnomalyComponentModel):
             y_out[outlier_idx] = self.value
         return y_out
 
-    def get_anomaly_times(self) -> list[float]:
+    def get_anomaly_times(self, **kwargs) -> list[float]:
         return [self.outlier_time]
 
 @dataclass
@@ -152,5 +159,5 @@ class TimeDelayModel(AnomalyComponentModel):
         y_out[:delay_samples] = 0
         return y_out
 
-    def get_anomaly_times(self) -> list[float]:
+    def get_anomaly_times(self, **kwargs) -> list[float]:
         return [self.delay]
