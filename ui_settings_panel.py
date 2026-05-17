@@ -18,9 +18,13 @@ class SettingsPanel:
         self.stft_window_type = tk.StringVar(value='hann')
         self.stft_overlap_widget = None
 
+        self.spectral_flux_rectify = tk.BooleanVar(value=False)
+
         self.setup_time_settings_panel(parent)
         ttk.Separator(parent, orient='horizontal').pack(fill='x', pady=10)
         self.setup_stft_settings_panel(parent)
+        ttk.Separator(parent, orient='horizontal').pack(fill='x', pady=10)
+        self.setup_spectral_flux_settings_panel(parent)
 
     def setup_time_settings_panel(self, parent):
         time_frame = ttk.LabelFrame(parent, text="Global Time Settings")
@@ -41,9 +45,52 @@ class SettingsPanel:
         window_combo.pack(fill=tk.X, padx=5, pady=(0, 5))
         window_combo.bind('<<ComboboxSelected>>', self.on_stft_params_changed)
         
-        ttk.Button(stft_controls_frame, text="Export Flux Data to CSV", command=self.export_flux_to_csv).pack(fill=tk.X, padx=5, pady=(10, 5))
-        
         self.on_stft_params_changed()
+
+    def setup_spectral_flux_settings_panel(self, parent):
+        flux_controls_frame = ttk.LabelFrame(parent, text="Spectral Flux Settings")
+        flux_controls_frame.pack(fill=tk.X, pady=(10, 5))
+
+        rectify_check = ttk.Checkbutton(
+            flux_controls_frame,
+            text="Half-wave Rectify",
+            variable=self.spectral_flux_rectify,
+            command=self.on_params_changed
+        )
+        rectify_check.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Button(flux_controls_frame, text="Export Flux Data to CSV", command=self.export_flux_to_csv).pack(fill=tk.X, padx=5, pady=(10, 5))
+
+    def get_settings(self) -> tuple[dict, dict]:
+        """Returns the current UI settings as dictionaries."""
+        ui_settings = {
+            'periods': self.periods.get(),
+            'duration_seconds': self.duration_seconds.get(),
+            'stft_window_size': self.stft_window_size.get(),
+            'stft_overlap_percent': self.stft_overlap_percent.get(),
+            'stft_window_type': self.stft_window_type.get(),
+        }
+        spectral_flux_settings = {
+            'rectify': self.spectral_flux_rectify.get()
+        }
+        return ui_settings, spectral_flux_settings
+
+    def apply_settings(self, ui_settings: dict, spectral_flux_settings: dict):
+        """Applies loaded settings to the UI, with defaults for missing values."""
+        # Time settings
+        self.periods.set(ui_settings.get('periods', 5.0))
+        self.duration_seconds.set(ui_settings.get('duration_seconds', 2.0))
+
+        # STFT settings
+        self.stft_window_size.set(ui_settings.get('stft_window_size', 256))
+        self.stft_overlap_percent.set(ui_settings.get('stft_overlap_percent', 50.0))
+        self.stft_window_type.set(ui_settings.get('stft_window_type', 'hann'))
+
+        # Spectral Flux settings
+        self.spectral_flux_rectify.set(spectral_flux_settings.get('rectify', False))
+
+        # Notify that parameters have changed to trigger a plot update
+        self.on_params_changed()
 
     @property
     def stft_overlap(self):

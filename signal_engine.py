@@ -22,7 +22,7 @@ class PipelineResult:
     ground_truth_times: list[float] = field(default_factory=list)
     evaluation_metrics: dict = field(default_factory=dict)
 
-def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, stft_overlap, stft_window_type) -> PipelineResult:
+def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, stft_overlap, stft_window_type, rectify=False) -> PipelineResult:
     fs = max(1000, max_freq * 40)
     
     # Calculate padding
@@ -57,7 +57,7 @@ def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, st
     Zxx_core = Zxx_ext[:, stft_core_idx]
 
     # Spectral Flux Plot calculated ONLY on clean core data
-    flux, peak_times = calculate_spectral_flux(Zxx_core, t_stft_core)
+    flux, peak_times = calculate_spectral_flux(Zxx_core, t_stft_core, rectify=rectify)
     
     # Evaluate anomaly detection
     # Default tolerance could be roughly 0.1 seconds, or dependent on window size

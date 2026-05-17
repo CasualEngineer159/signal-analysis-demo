@@ -146,32 +146,17 @@ class SignalGeneratorApp:
         self.controllers.clear()
         self.pipeline_panel.clear_listbox()
 
-        # Reset settings to default
-        self.settings_panel.periods.set(5.0)
-        self.settings_panel.duration_seconds.set(2.0)
-        self.settings_panel.stft_window_size.set(256)
-        self.settings_panel.stft_overlap_percent.set(75.0)
-        self.settings_panel.stft_window_type.set('hann')
-        
-        # Update STFT params in settings panel from the new values
-        self.settings_panel.on_stft_params_changed()
-
-        # Refresh plots
+        # Reset settings to default using the apply_settings method for consistency
+        self.settings_panel.apply_settings({}, {})
         self.update_plot()
 
     def save_configuration(self):
         filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
         if not filepath: return
         try:
-            ui_settings = {
-                "periods": self.settings_panel.periods.get(),
-                "duration_seconds": self.settings_panel.duration_seconds.get(),
-                "stft_window_size": self.settings_panel.stft_window_size.get(),
-                "stft_overlap_percent": self.settings_panel.stft_overlap_percent.get(),
-                "stft_window_type": self.settings_panel.stft_window_type.get(),
-            }
+            ui_settings, spectral_flux_settings = self.settings_panel.get_settings()
             components = [c.model.to_dict() for c in self.controllers]
-            ConfigManager.save_to_file(filepath, ui_settings, components)
+            ConfigManager.save_to_file(filepath, ui_settings, components, spectral_flux_settings)
         except Exception as e:
             messagebox.showerror("Save Error", f"Failed to save configuration file:\n{e}")
 
@@ -179,23 +164,18 @@ class SignalGeneratorApp:
         filepath = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
         if not filepath: return
         try:
-            ui_settings, components = ConfigManager.load_from_file(filepath)
+            ui_settings, components, spectral_flux_settings = ConfigManager.load_from_file(filepath)
             
             self.controllers.clear()
             self.pipeline_panel.clear_listbox()
 
-            if ui_settings:
-                self.settings_panel.periods.set(ui_settings.get('periods', 5.0))
-                self.settings_panel.duration_seconds.set(ui_settings.get('duration_seconds', 2.0))
-                self.settings_panel.stft_window_size.set(ui_settings.get('stft_window_size', 256))
-                self.settings_panel.stft_overlap_percent.set(ui_settings.get('stft_overlap_percent', 75.0))
-                self.settings_panel.stft_window_type.set(ui_settings.get('stft_window_type', 'hann'))
+            self.settings_panel.apply_settings(ui_settings, spectral_flux_settings)
 
             for comp_conf in components:
                 comp_type = comp_conf.get('type')
                 if comp_type in COMPONENT_MAP:
                     self.add_component(comp_type, comp_conf)
-            self.settings_panel.on_stft_params_changed()
+            
         except Exception as e:
             messagebox.showerror("Load Error", f"Failed to load or parse configuration file:\n{e}")
 
@@ -205,8 +185,6 @@ class SignalGeneratorApp:
         return max(signal_freqs) if signal_freqs else 1.0
 
     def update_plot(self, event=None):
-        # We need to make sure settings_panel is initialized because update_plot is called 
-        # during __init__ by pipeline_panel creation before settings_panel is ready
         if not hasattr(self, 'settings_panel'):
             return
 
@@ -223,10 +201,10 @@ class SignalGeneratorApp:
             max_freq,
             self.settings_panel.stft_window_size.get(),
             self.settings_panel.stft_overlap.get(),
-            self.settings_panel.stft_window_type.get()
+            self.settings_panel.stft_window_type.get(),
+            rectify=self.settings_panel.spectral_flux_rectify.get()
         )
 
-        # Store for CSV export
         self._last_flux_data = (result.t_stft_core, result.flux) if len(result.flux) > 0 else None
 
         if hasattr(self, 'plot_manager'):
@@ -237,7 +215,6 @@ class SignalGeneratorApp:
                 result.fft_peak_freqs, result.fft_peak_amps
             )
 
-            # Preview Plot
             self.preview_ax.clear()
             if selected_controller:
                 y_preview = selected_controller.model.generate(result.t, np.zeros_like(result.t))

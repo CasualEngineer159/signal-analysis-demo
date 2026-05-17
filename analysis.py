@@ -94,13 +94,14 @@ def perform_stft(y: np.ndarray, fs: float, window_type: str, nperseg: int, nover
     f, t, Zxx = stft(y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap)
     return f, t, np.abs(Zxx)
 
-def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray, rectify: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculates the spectral flux of an STFT result and finds anomalies.
 
     Args:
         Zxx (np.ndarray): The STFT magnitude matrix.
         t_stft (np.ndarray): The array of segment times.
+        rectify (bool): If True, applies half-wave rectification.
 
     Returns:
         A tuple containing:
@@ -110,9 +111,15 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray) -> tuple[np.nda
     if Zxx.size == 0 or len(t_stft) == 0:
         return np.array([]), np.array([])
 
-    # Calculate absolute difference between adjacent columns
-    diff = np.abs(np.diff(Zxx, axis=1))
+    # Calculate difference between adjacent columns
+    diff = np.diff(Zxx, axis=1)
     
+    # Apply half-wave rectification if specified
+    if rectify:
+        diff = np.maximum(0, diff)
+    else:
+        diff = np.abs(diff)
+
     # Sum differences along the frequency axis
     flux = np.sum(diff, axis=0)
     

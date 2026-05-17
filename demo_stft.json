@@ -52,5 +52,8 @@
                 "seed": 5501
             }
         }
-    ]
+    ],
+    "spectral_flux": {
+        "rectify": true
+    }
 }
