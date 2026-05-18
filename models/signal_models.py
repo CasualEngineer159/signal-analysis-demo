@@ -14,6 +14,7 @@ class SineModel(SignalComponentModel):
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
         if self.frequency < 0: return np.zeros_like(t)
         phase_rad = np.deg2rad(self.phase)
+        # Simple periodic signals evaluate against absolute global time
         return self.amplitude * np.sin(2 * np.pi * self.frequency * t + phase_rad)
 
     def get_max_freq(self) -> float:
@@ -57,9 +58,19 @@ class ChirpModel(SignalComponentModel):
 
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
         if len(t) == 0: return np.array([])
-        duration = t[-1]
+
+        # If end_time is specified, it's a windowed component.
+        if self.end_time >= self.start_time:
+            duration = self.end_time - self.start_time
+            t_relative = t - self.start_time
+        # Otherwise, it's a full-length component. Derive duration from the time slice.
+        else:
+            duration = t[-1] - t[0] if len(t) > 1 else 0
+            t_relative = t - t[0]
+
         if duration <= 0: return np.zeros_like(t)
-        return self.amplitude * chirp(t, f0=self.start_freq, f1=self.end_freq, t1=duration, method='linear')
+
+        return self.amplitude * chirp(t_relative, f0=self.start_freq, f1=self.end_freq, t1=duration, method='linear')
 
     def get_max_freq(self) -> float:
         return max(self.start_freq, self.end_freq)
@@ -75,29 +86,29 @@ class SineVaryingFreqModel(SignalComponentModel):
 
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
         if len(t) == 0: return np.array([])
-        y = np.zeros_like(t)
         
-        # Ensure change_time is within the signal's duration
-        duration = t[-1]
-        actual_change_time = np.clip(self.change_time, 0, duration)
-        change_idx = np.searchsorted(t, actual_change_time, side='right')
-        
-        t1 = t[:change_idx]
-        if len(t1) > 0:
-            y[:change_idx] = self.amplitude * np.sin(2 * np.pi * self.start_freq * t1)
-        
-        t2 = t[change_idx:]
-        if len(t2) > 0:
-            # Calculate phase at the end of the first segment to ensure continuity
-            last_phase = 2 * np.pi * self.start_freq * t[change_idx-1] if change_idx > 0 else 0
-            # Calculate phase correction for the new frequency
-            phase_correction = 2 * np.pi * self.end_freq * t[change_idx]
-            y[change_idx:] = self.amplitude * np.sin(2 * np.pi * self.end_freq * t2 - phase_correction + last_phase)
+        # If windowed, time is relative to the component's start_time.
+        # Otherwise, it's relative to the start of the provided time slice.
+        t0 = self.start_time if self.end_time >= self.start_time else t[0]
+        t_relative = t - t0
+        actual_change_time = self.change_time
 
-        return y
+        # Phase of the first signal at the exact moment of change
+        phase_at_change = 2 * np.pi * self.start_freq * actual_change_time
+
+        # Required phase offset for the second signal to ensure continuity
+        phase_offset = phase_at_change - (2 * np.pi * self.end_freq * actual_change_time)
+
+        # Generate both signals across the entire time slice
+        y1 = self.amplitude * np.sin(2 * np.pi * self.start_freq * t_relative)
+        y2 = self.amplitude * np.sin(2 * np.pi * self.end_freq * t_relative + phase_offset)
+
+        # Combine the signals based on the change time
+        return np.where(t_relative < actual_change_time, y1, y2)
 
     def get_max_freq(self) -> float:
         return max(self.start_freq, self.end_freq)
 
     def get_anomaly_times(self) -> list[float]:
-        return [self.change_time]
+        # The anomaly time is the component's start time plus the relative change time.
+        return [self.start_time + self.change_time]

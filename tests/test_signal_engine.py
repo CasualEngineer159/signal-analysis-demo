@@ -45,10 +45,10 @@ class TestSignalEngine(unittest.TestCase):
         # 1. t_ext and y_ext should be longer than t and y due to the padding
         self.assertGreater(len(result.t_ext), len(result.t))
         self.assertGreater(len(result.y_ext), len(result.y))
-        
+
         # Verify the extended time starts at exactly -padding_time
         self.assertAlmostEqual(result.t_ext[0], -expected_padding)
-        
+
         # 2. The core time vector (t) should strictly start at 0 and end before duration
         self.assertAlmostEqual(result.t[0], 0.0)
         self.assertLess(result.t[-1], duration)
@@ -61,7 +61,7 @@ class TestSignalEngine(unittest.TestCase):
         # Zxx_ext shape should be (frequencies, time_segments)
         self.assertEqual(result.Zxx_ext.shape[0], len(result.f))
         self.assertEqual(result.Zxx_ext.shape[1], len(result.t_stft_ext))
-        
+
         # Ensure that flux and t_stft_core lengths align
         self.assertEqual(len(result.flux), len(result.t_stft_core))
 

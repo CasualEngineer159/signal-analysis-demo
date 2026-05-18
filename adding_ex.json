@@ -1,0 +1,44 @@
+{
+    "ui_settings": {
+        "periods": 15.0,
+        "duration_seconds": 3.0,
+        "stft_window_size": 500,
+        "stft_overlap_percent": 50.0,
+        "stft_window_type": "hann"
+    },
+    "components": [
+        {
+            "type": "Sine",
+            "params": {
+                "start_time": 0.0,
+                "end_time": 1.0,
+                "amplitude": 1.0,
+                "frequency": 5.0,
+                "phase": 90.0
+            }
+        },
+        {
+            "type": "Chirp",
+            "params": {
+                "start_time": 1.0,
+                "end_time": 2.0,
+                "amplitude": 1.0,
+                "start_freq": 5.0,
+                "end_freq": 30.0
+            }
+        },
+        {
+            "type": "Sine",
+            "params": {
+                "start_time": 2.0,
+                "end_time": -1.0,
+                "amplitude": 1.0,
+                "frequency": 30.0,
+                "phase": 180.0
+            }
+        }
+    ],
+    "spectral_flux": {
+        "rectify": false
+    }
+}

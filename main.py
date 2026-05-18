@@ -1,14 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
-from tkinter import ttk
-import json
-import csv
-from tkinter import filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox
 
-from utils import create_slider_entry, ScrollableFrame
-from analysis import perform_fft, perform_stft, calculate_spectral_flux
+from utils import ScrollableFrame
 from components.signals import (SineController, CosineController, SquareController, 
                               ChirpController, SineVaryingFreqController)
 from components.anomalies import (GaussianNoiseController, ImpulseNoiseController, 
@@ -22,6 +16,7 @@ from config_manager import ConfigManager
 from signal_engine import generate_pipeline_data
 from ui_pipeline_list import PipelineListPanel
 from ui_settings_panel import SettingsPanel
+from ui_settings_popup import SettingsPopup
 
 # --- Component Mappings ---
 COMPONENT_MAP = {
@@ -51,8 +46,8 @@ class SignalGeneratorApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.controllers = []
-        
         self._last_flux_data = None
+        self.settings_popup_instance = None
 
         main_frame = ttk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -70,22 +65,15 @@ class SignalGeneratorApp:
 
         self.setup_file_io_panel(left_panel)
         
-        # Setup config panel early so pipeline list can use it
-        self.config_panel = ttk.LabelFrame(left_panel, text="Parameters")
-        
         self.pipeline_panel = PipelineListPanel(
             parent=left_panel,
             controllers=self.controllers,
             on_pipeline_changed=self.update_plot,
-            config_panel=self.config_panel,
+            on_open_settings=self.open_settings_popup,
             component_map=COMPONENT_MAP,
             signal_types=SIGNAL_TYPES,
             on_add_component=self.add_component
         )
-        
-        self.setup_preview_panel(left_panel)
-        
-        self.config_panel.pack(fill=tk.X, pady=(10, 5))
         
         self.settings_panel = SettingsPanel(
             parent=left_panel,
@@ -105,23 +93,30 @@ class SignalGeneratorApp:
         io_frame.pack(fill=tk.X, pady=(10, 5))
         btn_frame = ttk.Frame(io_frame)
         btn_frame.pack(fill=tk.X, padx=5, pady=5)
-        clear_btn = ttk.Button(btn_frame, text="Clear All", command=self.clear_all)
-        clear_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
-        save_btn = ttk.Button(btn_frame, text="Save Config", command=self.save_configuration)
-        save_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
-        load_btn = ttk.Button(btn_frame, text="Load Config", command=self.load_configuration)
-        load_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 0))
+        ttk.Button(btn_frame, text="Clear All", command=self.clear_all).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
+        ttk.Button(btn_frame, text="Save Config", command=self.save_configuration).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 5))
+        ttk.Button(btn_frame, text="Load Config", command=self.load_configuration).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 0))
 
-    def setup_preview_panel(self, parent):
-        preview_frame = ttk.LabelFrame(parent, text="Component Preview")
-        preview_frame.pack(fill=tk.X, pady=(10, 5))
-        self.preview_fig, self.preview_ax = plt.subplots(figsize=(4, 1.5))
-        self.preview_fig.tight_layout()
-        self.preview_canvas = FigureCanvasTkAgg(self.preview_fig, master=preview_frame)
-        self.preview_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    def open_settings_popup(self):
+        selected_controller = self.pipeline_panel.selected_controller
+        if not selected_controller:
+            return
+
+        if self.settings_popup_instance:
+            self.settings_popup_instance.on_close()
+
+        self.settings_popup_instance = SettingsPopup(
+            parent=self.root,
+            controller=selected_controller,
+            get_duration_func=self.settings_panel.duration_seconds.get,
+            on_close_callback=self.on_popup_closed
+        )
+
+    def on_popup_closed(self):
+        self.settings_popup_instance = None
+        self.update_plot()
 
     def handle_settings_change(self, source=None):
-        """Synchronize time settings and trigger plot update."""
         if source == "periods":
             max_freq = self._get_max_freq()
             new_duration = self.settings_panel.periods.get() / max_freq if max_freq > 0 else 2
@@ -130,7 +125,6 @@ class SignalGeneratorApp:
             max_freq = self._get_max_freq()
             new_periods = self.settings_panel.duration_seconds.get() * max_freq
             self.settings_panel.periods.set(new_periods)
-            
         self.update_plot()
 
     def add_component(self, comp_name, model_config=None):
@@ -145,8 +139,6 @@ class SignalGeneratorApp:
     def clear_all(self):
         self.controllers.clear()
         self.pipeline_panel.clear_listbox()
-
-        # Reset settings to default using the apply_settings method for consistency
         self.settings_panel.apply_settings({}, {})
         self.update_plot()
 
@@ -165,17 +157,13 @@ class SignalGeneratorApp:
         if not filepath: return
         try:
             ui_settings, components, spectral_flux_settings = ConfigManager.load_from_file(filepath)
-            
             self.controllers.clear()
             self.pipeline_panel.clear_listbox()
-
             self.settings_panel.apply_settings(ui_settings, spectral_flux_settings)
-
             for comp_conf in components:
                 comp_type = comp_conf.get('type')
                 if comp_type in COMPONENT_MAP:
                     self.add_component(comp_type, comp_conf)
-            
         except Exception as e:
             messagebox.showerror("Load Error", f"Failed to load or parse configuration file:\n{e}")
 
@@ -191,9 +179,9 @@ class SignalGeneratorApp:
         duration = self.settings_panel.duration_seconds.get()
         max_freq = self._get_max_freq()
         
-        selected_controller = self.pipeline_panel.selected_controller
-        if selected_controller: 
-            selected_controller.update_slider_ranges()
+        # Update slider ranges for all controllers, not just the selected one
+        for controller in self.controllers:
+            controller.update_slider_ranges()
         
         result = generate_pipeline_data(
             self.controllers,
@@ -214,19 +202,6 @@ class SignalGeneratorApp:
                 result.peak_times, result.xf, result.yf, result.ground_truth_times, result.evaluation_metrics,
                 result.fft_peak_freqs, result.fft_peak_amps, result.matched_pairs
             )
-
-            self.preview_ax.clear()
-            if selected_controller:
-                y_preview = selected_controller.model.generate(result.t, np.zeros_like(result.t))
-                self.preview_ax.plot(result.t, y_preview, color='darkorange')
-                self.preview_ax.set_title(f"Preview: {selected_controller.model.name}", fontsize=9)
-                self.preview_ax.set_xlim(self.plot_manager.ax.get_xlim())
-                self.preview_ax.set_ylim(self.plot_manager.ax.get_ylim())
-            else:
-                self.preview_ax.set_title("No Component Selected", fontsize=9)
-            self.preview_ax.tick_params(axis='x', labelsize=8)
-            self.preview_ax.tick_params(axis='y', labelsize=8)
-            self.preview_canvas.draw()
 
 if __name__ == '__main__':
     root = tk.Tk()

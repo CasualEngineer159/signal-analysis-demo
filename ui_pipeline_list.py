@@ -2,16 +2,15 @@ import tkinter as tk
 from tkinter import ttk
 
 class PipelineListPanel:
-    def __init__(self, parent, controllers, on_pipeline_changed, config_panel, component_map, signal_types, on_add_component):
+    def __init__(self, parent, controllers, on_pipeline_changed, on_open_settings, component_map, signal_types, on_add_component):
         self.controllers = controllers
         self.on_pipeline_changed = on_pipeline_changed
-        self.config_panel = config_panel
+        self.on_open_settings = on_open_settings
         self.component_map = component_map
         self.signal_types = signal_types
         self.on_add_component = on_add_component
         
         self.selected_controller = None
-        self.config_frame = None
         self._drag_data = {"item_index": None}
 
         self.setup_component_panels(parent)
@@ -24,6 +23,7 @@ class PipelineListPanel:
         self.pipeline_listbox = tk.Listbox(pipeline_frame, height=6, exportselection=False)
         self.pipeline_listbox.pack(fill=tk.X, padx=5, pady=5)
         self.pipeline_listbox.bind('<<ListboxSelect>>', self.on_component_select)
+        self.pipeline_listbox.bind('<Double-1>', self.open_settings_popup)
         
         # Drag and Drop bindings
         self.pipeline_listbox.bind('<Button-1>', self.on_drag_start)
@@ -32,8 +32,11 @@ class PipelineListPanel:
         
         btn_frame = ttk.Frame(pipeline_frame)
         btn_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
-        ttk.Button(btn_frame, text="Move Up", command=self.move_component_up).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 2))
-        ttk.Button(btn_frame, text="Move Down", command=self.move_component_down).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 2))
+        
+        # Adjusted button layout and widths
+        ttk.Button(btn_frame, text="Up", command=self.move_component_up).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 2))
+        ttk.Button(btn_frame, text="Down", command=self.move_component_down).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 2))
+        ttk.Button(btn_frame, text="Settings", command=self.open_settings_popup).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 2))
         ttk.Button(btn_frame, text="Remove", command=self.remove_component).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(2, 0))
 
         # Add Signal
@@ -55,6 +58,11 @@ class PipelineListPanel:
         anom_var = tk.StringVar(value=list(anom_classes.keys())[0])
         ttk.Combobox(anom_btn_frame, textvariable=anom_var, values=list(anom_classes.keys()), state='readonly').pack(side=tk.LEFT, fill=tk.X, expand=True)
         ttk.Button(anom_btn_frame, text="Add", command=lambda: self.on_add_component(anom_var.get())).pack(side=tk.LEFT, padx=(5,0))
+
+    def open_settings_popup(self, event=None):
+        """Calls the callback to open the settings window if an item is selected."""
+        if self.pipeline_listbox.curselection():
+            self.on_open_settings()
 
     def on_drag_start(self, event):
         """Record the item's starting index."""
@@ -80,19 +88,9 @@ class PipelineListPanel:
             controller = self.controllers.pop(current_index)
             self.controllers.insert(new_index, controller)
             
-            # Maintain selection if it was the selected item
-            if self.selected_controller and self.selected_controller.id == controller.id:
-                self.pipeline_listbox.selection_clear(0, tk.END)
-                self.pipeline_listbox.selection_set(new_index)
-            else:
-                # If we moved an item past the currently selected one, we need to fix the visual selection
-                if self.selected_controller:
-                    try:
-                        sel_idx = self.controllers.index(self.selected_controller)
-                        self.pipeline_listbox.selection_clear(0, tk.END)
-                        self.pipeline_listbox.selection_set(sel_idx)
-                    except ValueError:
-                        pass
+            # Maintain selection
+            self.pipeline_listbox.selection_clear(0, tk.END)
+            self.pipeline_listbox.selection_set(new_index)
                         
             self._drag_data["item_index"] = new_index
 
@@ -107,22 +105,23 @@ class PipelineListPanel:
         if not idxs: return
         idx = idxs[0]
         self.pipeline_listbox.delete(idx)
-        controller_to_remove = self.controllers.pop(idx)
-        if self.selected_controller and self.selected_controller.id == controller_to_remove.id:
-            if self.config_frame: self.config_frame.destroy()
-            self.selected_controller = None
+        self.controllers.pop(idx)
+        self.selected_controller = None
+        # Select the next item or the last one if the removed item was at the end
+        if self.pipeline_listbox.size() > 0:
+            new_selection_idx = min(idx, self.pipeline_listbox.size() - 1)
+            self.pipeline_listbox.selection_set(new_selection_idx)
+            self.on_component_select()
         self.on_pipeline_changed()
 
     def move_component_up(self):
         idxs = self.pipeline_listbox.curselection()
         if not idxs: return
         idx = idxs[0]
-        if idx == 0: return # Already at top
+        if idx == 0: return
         
-        # Swap in controllers
         self.controllers[idx - 1], self.controllers[idx] = self.controllers[idx], self.controllers[idx - 1]
         
-        # Swap in listbox
         text = self.pipeline_listbox.get(idx)
         self.pipeline_listbox.delete(idx)
         self.pipeline_listbox.insert(idx - 1, text)
@@ -134,12 +133,10 @@ class PipelineListPanel:
         idxs = self.pipeline_listbox.curselection()
         if not idxs: return
         idx = idxs[0]
-        if idx == len(self.controllers) - 1: return # Already at bottom
+        if idx == len(self.controllers) - 1: return
         
-        # Swap in controllers
         self.controllers[idx + 1], self.controllers[idx] = self.controllers[idx], self.controllers[idx + 1]
         
-        # Swap in listbox
         text = self.pipeline_listbox.get(idx)
         self.pipeline_listbox.delete(idx)
         self.pipeline_listbox.insert(idx + 1, text)
@@ -148,25 +145,17 @@ class PipelineListPanel:
         self.on_pipeline_changed()
 
     def on_component_select(self, event=None):
+        """Updates the currently selected controller based on listbox selection."""
         idxs = self.pipeline_listbox.curselection()
         if not idxs:
-            if self.config_frame: self.config_frame.destroy()
             self.selected_controller = None
-            self.on_pipeline_changed()
             return
         idx = idxs[0]
         self.selected_controller = self.controllers[idx]
-        if self.config_frame: self.config_frame.destroy()
-        self.config_frame = ttk.Frame(self.config_panel)
-        self.config_frame.pack(fill=tk.X, padx=5, pady=5)
-        if self.selected_controller:
-            self.selected_controller.get_config_frame(self.config_frame)
-        self.on_pipeline_changed()
 
     def add_to_listbox(self, controller):
         self.pipeline_listbox.insert(tk.END, str(controller))
         
     def clear_listbox(self):
         self.pipeline_listbox.delete(0, tk.END)
-        if self.config_frame: self.config_frame.destroy()
         self.selected_controller = None

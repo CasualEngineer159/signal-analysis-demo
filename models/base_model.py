@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict, fields
+import numpy as np
 
 @dataclass
 class BaseComponentModel(ABC):
@@ -29,26 +30,17 @@ class BaseComponentModel(ABC):
         The `name` field is used to identify the component type.
         """
         params = asdict(self)
-        # The 'name' is part of the top-level 'type', not the params themselves.
-        # This prevents it from being passed to the __init__ on deserialization.
         if 'name' in params:
             del params['name']
-
-        return {
-            'type': self.name,
-            'params': params
-        }
+        return {'type': self.name, 'params': params}
 
     @classmethod
     def from_dict(cls, config: dict) -> 'BaseComponentModel':
         """
         Creates a model instance from a dictionary configuration.
-        It only populates fields that are defined in the dataclass.
         """
         param_config = config.get('params', {})
-        # Get the names of the fields defined in the specific dataclass
         known_fields = {f.name for f in fields(cls)}
-        # Filter the input dictionary to only include known fields
         filtered_params = {k: v for k, v in param_config.items() if k in known_fields}
         return cls(**filtered_params)
 
@@ -59,8 +51,28 @@ class BaseComponentModel(ABC):
 @dataclass
 class SignalComponentModel(BaseComponentModel):
     """Base for models that generate a primary signal."""
+    start_time: float = 0.0
+    end_time: float = -1.0  # -1 indicates to the end of the signal
+
     def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
-        return y_in + self._generate_signal(t)
+        """Generates the component's signal and adds it to the input signal within the specified time window."""
+        if len(t) == 0:
+            return y_in
+
+        component_signal = self._generate_signal(t)
+        effective_end_time = self.end_time if self.end_time >= 0 else t[-1]
+
+        start_idx = np.searchsorted(t, self.start_time, side='left')
+        # Use 'left' to make the interval exclusive of the end point, preventing overlap
+        end_idx = np.searchsorted(t, effective_end_time, side='left')
+
+        if start_idx < end_idx:
+            y_out = y_in.copy()
+            # Add the component signal to the input
+            y_out[start_idx:end_idx] += component_signal[start_idx:end_idx]
+            return y_out
+        else:
+            return y_in
 
     @abstractmethod
     def _generate_signal(self, t: 'np.ndarray') -> 'np.ndarray':

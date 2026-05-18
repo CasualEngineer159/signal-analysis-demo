@@ -12,10 +12,18 @@ class SineController(ComponentController):
         self.vars['amplitude'] = tk.DoubleVar(value=self.model.amplitude)
         self.vars['frequency'] = tk.DoubleVar(value=self.model.frequency)
         self.vars['phase'] = tk.DoubleVar(value=self.model.phase)
-        
+        self.vars['start_time'] = tk.DoubleVar(value=self.model.start_time)
+        self.vars['end_time'] = tk.DoubleVar(value=self.model.end_time)
+
         create_slider_entry(parent, "Amplitude:", self.vars['amplitude'], 0, 10, self.update_model_from_vars)
         create_slider_entry(parent, "Frequency (Hz):", self.vars['frequency'], 0, 100, self.update_model_from_vars)
         create_slider_entry(parent, "Phase (deg):", self.vars['phase'], 0, 360, self.update_model_from_vars)
+        
+        start_time_frame = create_slider_entry(parent, "Start Time (s):", self.vars['start_time'], 0, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(start_time_frame)
+        
+        end_time_frame = create_slider_entry(parent, "End Time (s):", self.vars['end_time'], -1, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(end_time_frame)
 
 class CosineController(SineController):
     pass # UI is identical to Sine
@@ -30,11 +38,19 @@ class SquareController(ComponentController):
         self.vars['frequency'] = tk.DoubleVar(value=self.model.frequency)
         self.vars['phase'] = tk.DoubleVar(value=self.model.phase)
         self.vars['duty_cycle'] = tk.DoubleVar(value=self.model.duty_cycle)
+        self.vars['start_time'] = tk.DoubleVar(value=self.model.start_time)
+        self.vars['end_time'] = tk.DoubleVar(value=self.model.end_time)
 
         create_slider_entry(parent, "Amplitude:", self.vars['amplitude'], 0, 10, self.update_model_from_vars)
         create_slider_entry(parent, "Frequency (Hz):", self.vars['frequency'], 0, 100, self.update_model_from_vars)
         create_slider_entry(parent, "Phase (deg):", self.vars['phase'], 0, 360, self.update_model_from_vars)
         create_slider_entry(parent, "Duty Cycle:", self.vars['duty_cycle'], 0, 1, self.update_model_from_vars)
+        
+        start_time_frame = create_slider_entry(parent, "Start Time (s):", self.vars['start_time'], 0, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(start_time_frame)
+        
+        end_time_frame = create_slider_entry(parent, "End Time (s):", self.vars['end_time'], -1, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(end_time_frame)
 
 class ChirpController(ComponentController):
     def __init__(self, model: ChirpModel, update_callback, get_duration):
@@ -45,10 +61,18 @@ class ChirpController(ComponentController):
         self.vars['amplitude'] = tk.DoubleVar(value=self.model.amplitude)
         self.vars['start_freq'] = tk.DoubleVar(value=self.model.start_freq)
         self.vars['end_freq'] = tk.DoubleVar(value=self.model.end_freq)
+        self.vars['start_time'] = tk.DoubleVar(value=self.model.start_time)
+        self.vars['end_time'] = tk.DoubleVar(value=self.model.end_time)
 
         create_slider_entry(parent, "Amplitude:", self.vars['amplitude'], 0, 10, self.update_model_from_vars)
         create_slider_entry(parent, "Start Frequency (Hz):", self.vars['start_freq'], 1, 100, self.update_model_from_vars)
         create_slider_entry(parent, "End Frequency (Hz):", self.vars['end_freq'], 1, 100, self.update_model_from_vars)
+        
+        start_time_frame = create_slider_entry(parent, "Start Time (s):", self.vars['start_time'], 0, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(start_time_frame)
+        
+        end_time_frame = create_slider_entry(parent, "End Time (s):", self.vars['end_time'], -1, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(end_time_frame)
 
 class SineVaryingFreqController(ComponentController):
     def __init__(self, model: SineVaryingFreqModel, update_callback, get_duration):
@@ -60,9 +84,18 @@ class SineVaryingFreqController(ComponentController):
         self.vars['start_freq'] = tk.DoubleVar(value=self.model.start_freq)
         self.vars['end_freq'] = tk.DoubleVar(value=self.model.end_freq)
         self.vars['change_time'] = tk.DoubleVar(value=self.model.change_time)
+        self.vars['start_time'] = tk.DoubleVar(value=self.model.start_time)
+        self.vars['end_time'] = tk.DoubleVar(value=self.model.end_time)
 
         create_slider_entry(parent, "Amplitude:", self.vars['amplitude'], 0, 10, self.update_model_from_vars)
         create_slider_entry(parent, "Start Frequency (Hz):", self.vars['start_freq'], 1, 100, self.update_model_from_vars)
         create_slider_entry(parent, "End Frequency (Hz):", self.vars['end_freq'], 1, 100, self.update_model_from_vars)
-        frame = create_slider_entry(parent, "Change Time (s):", self.vars['change_time'], 0, self.get_duration(), self.update_model_from_vars)
-        self.config_widgets.append(frame)
+        
+        change_time_frame = create_slider_entry(parent, "Change Time (s):", self.vars['change_time'], 0, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(change_time_frame)
+        
+        start_time_frame = create_slider_entry(parent, "Start Time (s):", self.vars['start_time'], 0, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(start_time_frame)
+        
+        end_time_frame = create_slider_entry(parent, "End Time (s):", self.vars['end_time'], -1, self.get_duration(), self.update_model_from_vars)
+        self.config_widgets.append(end_time_frame)

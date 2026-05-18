@@ -8,7 +8,7 @@ class SettingsPanel:
     def __init__(self, parent, on_params_changed, get_last_flux_data):
         self.on_params_changed = on_params_changed
         self.get_last_flux_data = get_last_flux_data
-        
+
         self.periods = tk.DoubleVar(value=5.0)
         self.duration_seconds = tk.DoubleVar(value=2.0)
         self._is_updating_sliders = False
