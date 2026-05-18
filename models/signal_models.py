@@ -55,22 +55,25 @@ class ChirpModel(SignalComponentModel):
     amplitude: float = 1.0
     start_freq: float = 1.0
     end_freq: float = 50.0
+    duration: float = 2.0
 
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
         if len(t) == 0: return np.array([])
-
-        # If end_time is specified, it's a windowed component.
+        
+        # Make time relative to the component's start time for the chirp calculation.
+        # This ensures the chirp starts sweeping at self.start_time in the absolute timeline.
+        t_relative = t - self.start_time
+        
+        # Calculate the proper duration of the sweep (time to reach end_freq)
         if self.end_time >= self.start_time:
-            duration = self.end_time - self.start_time
-            t_relative = t - self.start_time
-        # Otherwise, it's a full-length component. Derive duration from the time slice.
+            sweep_duration = self.end_time - self.start_time
         else:
-            duration = t[-1] - t[0] if len(t) > 1 else 0
-            t_relative = t - t[0]
+            # If end_time is -1, it runs until the end of the global observation duration
+            sweep_duration = self.duration - self.start_time
+            
+        if sweep_duration <= 0: return np.zeros_like(t)
 
-        if duration <= 0: return np.zeros_like(t)
-
-        return self.amplitude * chirp(t_relative, f0=self.start_freq, f1=self.end_freq, t1=duration, method='linear')
+        return self.amplitude * chirp(t_relative, f0=self.start_freq, f1=self.end_freq, t1=sweep_duration, method='linear')
 
     def get_max_freq(self) -> float:
         return max(self.start_freq, self.end_freq)
@@ -87,10 +90,8 @@ class SineVaryingFreqModel(SignalComponentModel):
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
         if len(t) == 0: return np.array([])
         
-        # If windowed, time is relative to the component's start_time.
-        # Otherwise, it's relative to the start of the provided time slice.
-        t0 = self.start_time if self.end_time >= self.start_time else t[0]
-        t_relative = t - t0
+        # Always make time relative to the component's start time.
+        t_relative = t - self.start_time
         actual_change_time = self.change_time
 
         # Phase of the first signal at the exact moment of change

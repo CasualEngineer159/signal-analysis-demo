@@ -60,9 +60,16 @@ class SignalComponentModel(BaseComponentModel):
             return y_in
 
         component_signal = self._generate_signal(t)
-        effective_end_time = self.end_time if self.end_time >= 0 else t[-1]
 
-        start_idx = np.searchsorted(t, self.start_time, side='left')
+        # Fix for left padding: if start_time is 0, extend it to include the negative padding time.
+        # This prevents edge artifacts when STFT is calculated with zero-padding on the left.
+        effective_start_time = t[0] if (self.start_time <= 0.0 and t[0] < 0.0) else self.start_time
+        
+        # Similar fix for right padding: if end_time is -1.0, extend it to the very end of t_ext.
+        # Actually, end_time = -1.0 logic already covered this by going to t[-1], but let's be safe:
+        effective_end_time = t[-1] + 1.0 if self.end_time < 0 else self.end_time
+
+        start_idx = np.searchsorted(t, effective_start_time, side='left')
         # Use 'left' to make the interval exclusive of the end point, preventing overlap
         end_idx = np.searchsorted(t, effective_end_time, side='left')
 

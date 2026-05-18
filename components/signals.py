@@ -74,6 +74,18 @@ class ChirpController(ComponentController):
         end_time_frame = create_slider_entry(parent, "End Time (s):", self.vars['end_time'], -1, self.get_duration(), self.update_model_from_vars)
         self.config_widgets.append(end_time_frame)
 
+    def update_model_from_vars(self, *args):
+        super().update_model_from_vars(*args)
+        # Update duration on the model from the global UI state
+        if hasattr(self.model, 'duration'):
+            self.model.duration = self.get_duration()
+
+    def update_slider_ranges(self):
+        super().update_slider_ranges()
+        # Also update the duration on the model when global duration changes
+        if hasattr(self.model, 'duration'):
+            self.model.duration = self.get_duration()
+
 class SineVaryingFreqController(ComponentController):
     def __init__(self, model: SineVaryingFreqModel, update_callback, get_duration):
         super().__init__(model, update_callback, get_duration)

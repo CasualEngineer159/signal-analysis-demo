@@ -1,6 +1,7 @@
 import numpy as np
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import matplotlib.pyplot as plt
 
 from utils import ScrollableFrame
 from components.signals import (SineController, CosineController, SquareController, 
@@ -47,6 +48,7 @@ class SignalGeneratorApp:
 
         self.controllers = []
         self._last_flux_data = None
+        self._last_pipeline_result = None
         self.settings_popup_instance = None
 
         main_frame = ttk.Frame(root)
@@ -78,7 +80,8 @@ class SignalGeneratorApp:
         self.settings_panel = SettingsPanel(
             parent=left_panel,
             on_params_changed=self.handle_settings_change,
-            get_last_flux_data=lambda: self._last_flux_data
+            get_last_flux_data=lambda: self._last_flux_data,
+            on_debug_signal=self.show_debug_signal
         )
 
         self.plot_manager = PlotManager(right_panel)
@@ -172,6 +175,27 @@ class SignalGeneratorApp:
         signal_freqs = [m.get_max_freq() for m in signal_models if m.get_max_freq() > 0]
         return max(signal_freqs) if signal_freqs else 1.0
 
+    def show_debug_signal(self):
+        if self._last_pipeline_result is not None:
+            result = self._last_pipeline_result
+            duration = self.settings_panel.duration_seconds.get()
+            
+            fig = plt.figure(figsize=(10, 5))
+            plt.plot(result.t_ext, result.y_ext, label="Extended Signal (with padding)", color='blue')
+            plt.axvline(x=0, color='r', linestyle='--', label="Start of core signal")
+            plt.axvline(x=duration, color='r', linestyle='--', label="End of core signal")
+            
+            # Highlight the core area
+            plt.axvspan(0, duration, color='gray', alpha=0.2, label="Core signal area")
+            
+            plt.title("Debug Signal: Extended Time Range")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Amplitude")
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
     def update_plot(self, event=None):
         if not hasattr(self, 'settings_panel'):
             return
@@ -192,7 +216,8 @@ class SignalGeneratorApp:
             self.settings_panel.stft_window_type.get(),
             rectify=self.settings_panel.spectral_flux_rectify.get()
         )
-
+        
+        self._last_pipeline_result = result
         self._last_flux_data = (result.t_stft_core, result.flux) if len(result.flux) > 0 else None
 
         if hasattr(self, 'plot_manager'):

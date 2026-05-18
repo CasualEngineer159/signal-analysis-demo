@@ -5,9 +5,10 @@ from tkinter import filedialog, messagebox
 from utils import create_slider_entry
 
 class SettingsPanel:
-    def __init__(self, parent, on_params_changed, get_last_flux_data):
+    def __init__(self, parent, on_params_changed, get_last_flux_data, on_debug_signal=None):
         self.on_params_changed = on_params_changed
         self.get_last_flux_data = get_last_flux_data
+        self.on_debug_signal = on_debug_signal
 
         self.periods = tk.DoubleVar(value=5.0)
         self.duration_seconds = tk.DoubleVar(value=2.0)
@@ -31,6 +32,9 @@ class SettingsPanel:
         time_frame.pack(fill=tk.X, pady=(10, 5))
         create_slider_entry(time_frame, "Visible Periods:", self.periods, 1, 50, self.on_periods_changed)
         create_slider_entry(time_frame, "Duration (s):", self.duration_seconds, 0.1, 10, self.on_duration_changed)
+        
+        if self.on_debug_signal:
+            ttk.Button(time_frame, text="Debug Signal", command=self.on_debug_signal).pack(fill=tk.X, padx=5, pady=(5, 5))
 
     def setup_stft_settings_panel(self, parent):
         stft_controls_frame = ttk.LabelFrame(parent, text="STFT Settings")
