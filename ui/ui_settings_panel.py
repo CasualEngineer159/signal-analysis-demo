@@ -21,6 +21,7 @@ class SettingsPanel:
         self.stft_overlap_widget = None
 
         self.spectral_flux_rectify = tk.BooleanVar(value=False)
+        self.show_peaks = tk.BooleanVar(value=True)
         
         # Determine the data directory for exporting CSVs
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,6 +33,8 @@ class SettingsPanel:
         # Thicker Horizontal Separator
         separator = tk.Frame(parent, height=5, bg='black', relief=tk.SUNKEN, bd=2)
         separator.pack(fill=tk.X, pady=10)
+        
+        self.setup_plot_settings_panel(parent)
         
         self.setup_stft_settings_panel(parent)
         
@@ -47,6 +50,18 @@ class SettingsPanel:
         
         if self.on_debug_signal:
             ttk.Button(time_frame, text="Debug Signal", command=self.on_debug_signal).pack(fill=tk.X, padx=5, pady=(5, 5))
+
+    def setup_plot_settings_panel(self, parent):
+        plot_settings_frame = ttk.LabelFrame(parent, text="Plot Settings")
+        plot_settings_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        show_peaks_check = ttk.Checkbutton(
+            plot_settings_frame,
+            text="Show Peak Detection",
+            variable=self.show_peaks,
+            command=self.on_params_changed
+        )
+        show_peaks_check.pack(fill=tk.X, padx=5, pady=5)
 
     def setup_stft_settings_panel(self, parent):
         stft_controls_frame = ttk.LabelFrame(parent, text="STFT Settings")
@@ -85,6 +100,7 @@ class SettingsPanel:
             'stft_window_size': self.stft_window_size.get(),
             'stft_overlap_percent': self.stft_overlap_percent.get(),
             'stft_window_type': self.stft_window_type.get(),
+            'show_peaks': self.show_peaks.get(),
         }
         spectral_flux_settings = {
             'rectify': self.spectral_flux_rectify.get()
@@ -101,6 +117,9 @@ class SettingsPanel:
         self.stft_window_size.set(ui_settings.get('stft_window_size', 256))
         self.stft_overlap_percent.set(ui_settings.get('stft_overlap_percent', 50.0))
         self.stft_window_type.set(ui_settings.get('stft_window_type', 'hann'))
+
+        # Plot settings
+        self.show_peaks.set(ui_settings.get('show_peaks', True))
 
         # Spectral Flux settings
         self.spectral_flux_rectify.set(spectral_flux_settings.get('rectify', False))

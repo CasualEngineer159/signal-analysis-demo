@@ -1,0 +1,37 @@
+{
+    "ui_settings": {
+        "duration_seconds": 4.0,
+        "stft_window_size": 512,
+        "stft_overlap_percent": 50.0,
+        "stft_window_type": "hann"
+    },
+    "components": [
+        {
+            "type": "Sine",
+            "params": {
+                "start_time": 0.0,
+                "end_time": -1.0,
+                "amplitude": 0.5,
+                "frequency": 80.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 1.5,
+                "seed": 42
+            }
+        },
+        {
+            "type": "Signal Dropout",
+            "params": {
+                "start_time": 2.0,
+                "duration": 0.2
+            }
+        }
+    ],
+    "spectral_flux": {
+        "rectify": true
+    }
+}

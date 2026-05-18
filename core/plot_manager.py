@@ -97,7 +97,7 @@ class PlotManager:
                 
             self.eval_labels[metric] = value_label
 
-    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None, matched_pairs=None):
+    def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, show_peaks, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None, matched_pairs=None):
         self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear(); self.flux_ax.clear()
 
         # Time-Domain Plot
@@ -119,7 +119,7 @@ class PlotManager:
         # Spectral Flux Plot calculated ONLY on clean core data
         if len(flux) > 0:
             self.flux_ax.plot(t_stft_core, flux, color='purple')
-            if peak_times is not None and len(peak_times) > 0:
+            if show_peaks and peak_times is not None and len(peak_times) > 0:
                 for i, peak_time in enumerate(peak_times):
                     self.flux_ax.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
                 self.flux_ax.legend(loc='upper right', fontsize='small')
@@ -135,7 +135,7 @@ class PlotManager:
         
         # FFT Plot
         self.fft_ax.plot(xf, yf)
-        if fft_peak_freqs is not None and fft_peak_amps is not None:
+        if show_peaks and fft_peak_freqs is not None and fft_peak_amps is not None:
             for i, (freq, amp) in enumerate(zip(fft_peak_freqs, fft_peak_amps)):
                 self.fft_ax.axvline(x=freq, color='red', linestyle='--', alpha=0.7, label='Detected Peak' if i == 0 else "")
                 self.fft_ax.plot(freq, amp, "rx")

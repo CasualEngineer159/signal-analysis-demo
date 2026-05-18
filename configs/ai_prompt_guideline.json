@@ -15,29 +15,29 @@
     },
     "components": [
         {
-            "//": "A sine wave. This is a fundamental building block.",
+            "//": "A sine wave. This is a fundamental building block. Set end_time to -1 if you want the signal to last for the whole duration.",
             "type": "Sine",
             "params": {
                 "amplitude": 1.0,
                 "frequency": 10.0,
                 "phase": 0.0,
                 "start_time": 0.0,
-                "end_time": 5.0
+                "end_time": -1.0
             }
         },
         {
-            "//": "A cosine wave, which is a sine wave with a 90-degree phase shift.",
+            "//": "A cosine wave, which is a sine wave with a 90-degree phase shift. Set end_time to -1 if you want the signal to last for the whole duration.",
             "type": "Cosine",
             "params": {
                 "amplitude": 0.5,
                 "frequency": 20.0,
                 "phase": 0.0,
                 "start_time": 0.0,
-                "end_time": 5.0
+                "end_time": -1.0
             }
         },
         {
-            "//": "A square wave. Note the duty_cycle parameter.",
+            "//": "A square wave. Note the duty_cycle parameter. Set end_time to -1 if you want the signal to last for the whole duration.",
             "type": "Square",
             "params": {
                 "amplitude": 0.5,
@@ -45,22 +45,22 @@
                 "phase": 0.0,
                 "duty_cycle": 0.5,
                 "start_time": 0.0,
-                "end_time": 5.0
+                "end_time": -1.0
             }
         },
         {
-            "//": "A chirp signal with linearly increasing frequency.",
+            "//": "A chirp signal with linearly increasing frequency. Set end_time to -1 if you want the signal to last for the whole duration.",
             "type": "Chirp",
             "params": {
                 "amplitude": 0.5,
                 "start_freq": 5.0,
                 "end_freq": 25.0,
                 "start_time": 0.0,
-                "end_time": 5.0
+                "end_time": -1.0
             }
         },
         {
-            "//": "A sine wave that abruptly changes frequency. This is a non-stationary event.",
+            "//": "A sine wave that abruptly changes frequency. This is a non-stationary event. Set end_time to -1 if you want the signal to last for the whole duration.",
             "type": "Sine (Varying Freq)",
             "params": {
                 "amplitude": 1.0,
@@ -68,7 +68,7 @@
                 "end_freq": 60.0,
                 "change_time": 1.0,
                 "start_time": 0.0,
-                "end_time": 5.0
+                "end_time": -1.0
             }
         },
         {
@@ -126,10 +126,11 @@
             }
         },
         {
-            "//": "Clips the signal's amplitude at a given threshold.",
+            "//": "Clips the signal's amplitude at given lower and upper thresholds.",
             "type": "Saturation",
             "params": {
-                "threshold": 1.2
+                "lower_threshold": -1.0,
+                "upper_threshold": 1.0
             }
         },
         {

@@ -123,8 +123,11 @@ class SaturationController(ComponentController):
 
     def get_config_frame(self, parent):
         super().get_config_frame(parent)
-        self.vars['threshold'] = tk.DoubleVar(value=self.model.threshold)
-        create_slider_entry(parent, "Threshold:", self.vars['threshold'], 0, 10, self.update_model_from_vars)
+        self.vars['lower_threshold'] = tk.DoubleVar(value=self.model.lower_threshold)
+        self.vars['upper_threshold'] = tk.DoubleVar(value=self.model.upper_threshold)
+
+        create_slider_entry(parent, "Lower Threshold:", self.vars['lower_threshold'], -10, 0, self.update_model_from_vars)
+        create_slider_entry(parent, "Upper Threshold:", self.vars['upper_threshold'], 0, 10, self.update_model_from_vars)
 
 class OutlierController(ComponentController):
     def __init__(self, model: OutlierModel, update_callback, get_duration):

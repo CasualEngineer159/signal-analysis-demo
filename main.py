@@ -237,10 +237,12 @@ class SignalGeneratorApp:
         ax2_stft.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
         ax2_stft.set_xlim(0, duration)
 
+        show_peaks = self.settings_panel.show_peaks.get()
+
         # Spectral Flux Plot
         if len(result.flux) > 0:
             ax2_flux.plot(result.t_stft_core, result.flux, color='purple')
-            if result.peak_times is not None and len(result.peak_times) > 0:
+            if show_peaks and result.peak_times is not None and len(result.peak_times) > 0:
                 for i, peak_time in enumerate(result.peak_times):
                     ax2_flux.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
                 ax2_flux.legend(loc='upper right', fontsize='small')
@@ -255,7 +257,7 @@ class SignalGeneratorApp:
         # --- Window 3: FFT Spectrum ---
         fig3, ax3 = plt.subplots(figsize=(10, 5))
         ax3.plot(result.xf, result.yf)
-        if result.fft_peak_freqs is not None and result.fft_peak_amps is not None:
+        if show_peaks and result.fft_peak_freqs is not None and result.fft_peak_amps is not None:
             for i, (freq, amp) in enumerate(zip(result.fft_peak_freqs, result.fft_peak_amps)):
                 ax3.axvline(x=freq, color='red', linestyle='--', alpha=0.7, label='Detected Peak' if i == 0 else "")
                 ax3.plot(freq, amp, "rx")
@@ -294,11 +296,13 @@ class SignalGeneratorApp:
         self._last_pipeline_result = result
         self._last_flux_data = (result.t_stft_core, result.flux) if len(result.flux) > 0 else None
 
+        show_peaks = self.settings_panel.show_peaks.get()
+
         if hasattr(self, 'plot_manager'):
             self.plot_manager.draw_plots(
                 duration, max_freq, result.fs, result.t, result.y, result.t_ext, result.y_ext,
                 result.t_stft_ext, result.f, result.Zxx_ext, result.t_stft_core, result.flux,
-                result.peak_times, result.xf, result.yf, result.ground_truth_times, result.evaluation_metrics,
+                result.peak_times, result.xf, result.yf, show_peaks, result.ground_truth_times, result.evaluation_metrics,
                 result.fft_peak_freqs, result.fft_peak_amps, result.matched_pairs
             )
 

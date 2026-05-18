@@ -254,12 +254,12 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_saturation_model(self):
-        model = SaturationModel(threshold=0.5)
-        y_in_test = np.array([-1.0, 0.2, 0.8, 1.5])
+        model = SaturationModel(lower_threshold=-0.5, upper_threshold=0.5)
+        y_in_test = np.array([-1.0, -0.2, 0.2, 0.8, 1.5])
         y_out = model.generate(self.t_nominal, y_in_test)
-        np.testing.assert_array_equal(y_out, np.array([-0.5, 0.2, 0.5, 0.5]))
+        np.testing.assert_array_equal(y_out, np.array([-0.5, -0.2, 0.2, 0.5, 0.5]))
 
-        model_zero = SaturationModel(threshold=0)
+        model_zero = SaturationModel(lower_threshold=0, upper_threshold=0)
         y_out_zero = model_zero.generate(self.t_nominal, y_in_test)
         np.testing.assert_array_equal(y_out_zero, np.zeros_like(y_in_test))
         

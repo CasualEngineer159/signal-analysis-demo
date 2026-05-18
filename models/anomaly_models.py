@@ -116,12 +116,14 @@ class DropoutModel(AnomalyComponentModel):
 class SaturationModel(AnomalyComponentModel):
     """Model for signal saturation."""
     name: str = field(default="Saturation", init=False)
-    threshold: float = 1.0
+    lower_threshold: float = -1.0
+    upper_threshold: float = 1.0
 
     def _apply_anomaly(self, t: np.ndarray, y_in: np.ndarray) -> np.ndarray:
-        # Ensure threshold is non-negative
-        actual_threshold = max(0, self.threshold)
-        return np.clip(y_in, -actual_threshold, actual_threshold)
+        # Ensure upper is >= lower (swap if needed)
+        lower = min(self.lower_threshold, self.upper_threshold)
+        upper = max(self.lower_threshold, self.upper_threshold)
+        return np.clip(y_in, lower, upper)
 
 @dataclass
 class OutlierModel(AnomalyComponentModel):

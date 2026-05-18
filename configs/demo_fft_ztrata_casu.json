@@ -1,0 +1,39 @@
+{
+    "ui_settings": {
+        "periods": 50.0,
+        "duration_seconds": 4.0,
+        "stft_window_size": 256,
+        "stft_overlap_percent": 50.0,
+        "stft_window_type": "hann",
+        "show_peaks": false
+    },
+    "components": [
+        {
+            "type": "Sine (Varying Freq)",
+            "params": {
+                "start_time": 0.0,
+                "end_time": -1.0,
+                "amplitude": 1.0,
+                "start_freq": 50.0,
+                "end_freq": 70.0,
+                "change_time": 2.0
+            }
+        },
+        {
+            "type": "Gaussian Noise",
+            "params": {
+                "std_dev": 0.1,
+                "seed": 12345
+            }
+        },
+        {
+            "type": "Drift",
+            "params": {
+                "slope": 0.1
+            }
+        }
+    ],
+    "spectral_flux": {
+        "rectify": false
+    }
+}
