@@ -56,14 +56,20 @@ class SignalGeneratorApp:
         main_frame = ttk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
+        # --- Left Container: Configuration, Pipeline, Settings ---
         left_container = ttk.Frame(main_frame, width=350)
-        left_container.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        left_container.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 5))
         left_container.pack_propagate(False)
 
         left_scroll = ScrollableFrame(left_container, h_scroll=False)
         left_scroll.pack(fill=tk.BOTH, expand=True)
         left_panel = left_scroll.scrollable_frame
+        
+        # --- Thick Vertical Separator ---
+        separator = tk.Frame(main_frame, width=3, bg='gray')
+        separator.pack(side=tk.LEFT, fill=tk.Y, padx=5)
 
+        # --- Right Container: Plots and Tables ---
         right_panel = ttk.Frame(main_frame)
         right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -185,25 +191,83 @@ class SignalGeneratorApp:
         return max(signal_freqs) if signal_freqs else 1.0
 
     def show_debug_signal(self):
-        if self._last_pipeline_result is not None:
-            result = self._last_pipeline_result
-            duration = self.settings_panel.duration_seconds.get()
-            
-            fig = plt.figure(figsize=(10, 5))
-            plt.plot(result.t_ext, result.y_ext, label="Extended Signal (with padding)", color='blue')
-            plt.axvline(x=0, color='r', linestyle='--', label="Start of core signal")
-            plt.axvline(x=duration, color='r', linestyle='--', label="End of core signal")
-            
-            # Highlight the core area
-            plt.axvspan(0, duration, color='gray', alpha=0.2, label="Core signal area")
-            
-            plt.title("Debug Signal: Extended Time Range")
-            plt.xlabel("Time [s]")
-            plt.ylabel("Amplitude")
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+        # Regenerate data every time the button is pressed
+        duration = self.settings_panel.duration_seconds.get()
+        max_freq = self._get_max_freq()
+        
+        result = generate_pipeline_data(
+            self.controllers,
+            duration,
+            max_freq,
+            self.settings_panel.stft_window_size.get(),
+            self.settings_panel.stft_overlap.get(),
+            self.settings_panel.stft_window_type.get(),
+            rectify=self.settings_panel.spectral_flux_rectify.get()
+        )
+
+        # --- Window 1: Extended Time-Domain Signal ---
+        fig1, ax1 = plt.subplots(figsize=(12, 6))
+        ax1.plot(result.t_ext, result.y_ext, label="Extended Signal (with padding)", color='blue')
+        ax1.axvline(x=0, color='r', linestyle='--', label="Start of core signal")
+        ax1.axvline(x=duration, color='r', linestyle='--', label="End of core signal")
+        ax1.axvspan(0, duration, color='gray', alpha=0.2, label="Core signal area")
+        ax1.set_title("Extended Signal with Padding")
+        ax1.set_xlabel("Time [s]")
+        ax1.set_ylabel("Amplitude")
+        ax1.legend()
+        ax1.grid(True)
+        fig1.tight_layout()
+
+        # --- Window 2: Main Analysis Plots (Time-Domain, STFT, Flux) ---
+        fig2, (ax2_td, ax2_stft, ax2_flux) = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(6, 8))
+
+        # Time-Domain Plot
+        ax2_td.plot(result.t, result.y)
+        ax2_td.set_title("Time-Domain Signal (Core)")
+        ax2_td.set_ylabel("Amplitude")
+        ax2_td.grid(True)
+        ax2_td.set_xlim(0, duration)
+
+        # STFT Plot
+        if result.Zxx_ext.size > 0:
+            ax2_stft.pcolormesh(result.t_stft_ext, result.f, result.Zxx_ext, shading='gouraud')
+        ax2_stft.set_title("Short-Time Fourier Transform (STFT)")
+        ax2_stft.set_ylabel("Frequency [Hz]")
+        ax2_stft.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
+        ax2_stft.set_xlim(0, duration)
+
+        # Spectral Flux Plot
+        if len(result.flux) > 0:
+            ax2_flux.plot(result.t_stft_core, result.flux, color='purple')
+            if result.peak_times is not None and len(result.peak_times) > 0:
+                for i, peak_time in enumerate(result.peak_times):
+                    ax2_flux.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
+                ax2_flux.legend(loc='upper right', fontsize='small')
+        ax2_flux.set_title("Spectral Flux")
+        ax2_flux.set_xlabel("Time [s]")
+        ax2_flux.set_ylabel("Spectral Flux")
+        ax2_flux.set_xlim(0, duration)
+        ax2_flux.grid(True)
+        
+        fig2.tight_layout()
+
+        # --- Window 3: FFT Spectrum ---
+        fig3, ax3 = plt.subplots(figsize=(10, 5))
+        ax3.plot(result.xf, result.yf)
+        if result.fft_peak_freqs is not None and result.fft_peak_amps is not None:
+            for i, (freq, amp) in enumerate(zip(result.fft_peak_freqs, result.fft_peak_amps)):
+                ax3.axvline(x=freq, color='red', linestyle='--', alpha=0.7, label='Detected Peak' if i == 0 else "")
+                ax3.plot(freq, amp, "rx")
+            if len(result.fft_peak_freqs) > 0:
+                ax3.legend(loc='upper right', fontsize='small')
+        ax3.set_title("FFT Spectrum (Core Signal)")
+        ax3.set_xlabel("Frequency [Hz]")
+        ax3.set_ylabel("Amplitude")
+        ax3.grid(True)
+        ax3.set_xlim(0, max_freq * 2 if max_freq > 0 else 100)
+        fig3.tight_layout()
+
+        plt.show()
 
     def update_plot(self, event=None):
         if not hasattr(self, 'settings_panel'):

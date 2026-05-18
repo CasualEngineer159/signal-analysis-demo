@@ -1,0 +1,34 @@
+{
+    "ui_settings": {
+        "periods": 50.0,
+        "duration_seconds": 3.0,
+        "stft_window_size": 256,
+        "stft_overlap_percent": 50.0,
+        "stft_window_type": "boxcar"
+    },
+    "components": [
+        {
+            "type": "Sine",
+            "params": {
+                "start_time": 0.0,
+                "end_time": -1.0,
+                "amplitude": 1.0,
+                "frequency": 50.0,
+                "phase": 0.0
+            }
+        },
+        {
+            "type": "Sine",
+            "params": {
+                "start_time": 0.0,
+                "end_time": -1.0,
+                "amplitude": 0.1,
+                "frequency": 120.0,
+                "phase": 0.0
+            }
+        }
+    ],
+    "spectral_flux": {
+        "rectify": false
+    }
+}

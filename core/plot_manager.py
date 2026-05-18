@@ -111,6 +111,7 @@ class PlotManager:
         # Matplotlib's xlim will visually crop it perfectly to the axis boundaries.
         if Zxx_ext.size > 0:
             self.stft_ax.pcolormesh(t_stft_ext, f, Zxx_ext, shading='gouraud')
+        self.stft_ax.set_title("Short-Time Fourier Transform (STFT)")
         self.stft_ax.set_ylabel("Frequency [Hz]")
         self.stft_ax.set_ylim(0, max_freq * 2 if max_freq > 0 else 100)
         self.stft_ax.set_xlim(0, duration) # Force strict visual limits
@@ -123,6 +124,7 @@ class PlotManager:
                     self.flux_ax.axvline(x=peak_time, color='red', linestyle='--', alpha=0.7, label='Detected Anomaly' if i == 0 else "")
                 self.flux_ax.legend(loc='upper right', fontsize='small')
                 
+        self.flux_ax.set_title("Spectral Flux")
         self.flux_ax.set_xlabel("Time [s]")
         self.flux_ax.set_ylabel("Spectral Flux")
         self.flux_ax.set_xlim(0, duration) # Force strict visual limits

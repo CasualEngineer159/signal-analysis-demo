@@ -28,9 +28,15 @@ class SettingsPanel:
         os.makedirs(self.data_dir, exist_ok=True)
 
         self.setup_time_settings_panel(parent)
-        ttk.Separator(parent, orient='horizontal').pack(fill='x', pady=10)
+        
+        # Thicker Horizontal Separator
+        separator = tk.Frame(parent, height=5, bg='black', relief=tk.SUNKEN, bd=2)
+        separator.pack(fill=tk.X, pady=10)
+        
         self.setup_stft_settings_panel(parent)
+        
         ttk.Separator(parent, orient='horizontal').pack(fill='x', pady=10)
+
         self.setup_spectral_flux_settings_panel(parent)
 
     def setup_time_settings_panel(self, parent):
@@ -46,7 +52,7 @@ class SettingsPanel:
         stft_controls_frame = ttk.LabelFrame(parent, text="STFT Settings")
         stft_controls_frame.pack(fill=tk.X, pady=(10, 5))
         
-        create_slider_entry(stft_controls_frame, "Window Size:", self.stft_window_size, 32, 512, self.on_stft_params_changed)
+        create_slider_entry(stft_controls_frame, "Window Size:", self.stft_window_size, 32, 2048, self.on_stft_params_changed)
         self.stft_overlap_widget = create_slider_entry(stft_controls_frame, "Overlap (%):", self.stft_overlap_percent, 0, 99, self.on_stft_params_changed)
 
         ttk.Label(stft_controls_frame, text="Window Type:").pack(pady=(5,0), padx=5, anchor='w')
