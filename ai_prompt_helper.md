@@ -16,6 +16,7 @@ The project is a Signal Analysis Tool built with Python and Tkinter. It allows u
     *   `COMPONENT_MAP`: A dictionary that maps component names to their corresponding model and controller classes.
     *   Initializes the main window, panels, and plot manager.
     *   Handles saving and loading of configurations.
+    *   Manages the lifecycle of the settings popup window.
 
 ### `utils.py`
 
@@ -36,11 +37,18 @@ The project is a Signal Analysis Tool built with Python and Tkinter. It allows u
     *   `get_matched_pairs`: Matches ground truth times to predicted times.
     *   `evaluate_detection`: Evaluates anomaly detection performance.
 
+### `models/base_model.py`
+
+*   **Purpose:** Defines the foundational abstract classes for all signal and anomaly components.
+*   **Key Components:**
+    *   `BaseComponentModel`, `SignalComponentModel`, and `AnomalyComponentModel` establishing the core methods.
+    *   Defines `get_anomaly_times` for components to report ground truth events.
+
 ### `components/signals.py`
 
 *   **Purpose:** Defines the UI controllers for the various signal types.
 *   **Key Classes:**
-    *   `SineController`, `CosineController`, `SquareController`, `ChirpController`, `SineVaryingFreqController`: These classes are responsible for creating the UI elements (sliders, entries) for configuring the parameters of their respective signal models.
+    *   `SineController`, `CosineController`, `SquareController`, `ChirpController`, `SineVaryingFreqController`: These classes are responsible for creating the UI elements (sliders, entries) for configuring the parameters of their respective signal models. Each signal controller includes "Start Time" and "End Time" sliders for defining the active window.
 
 ### `components/anomalies.py`
 
@@ -52,7 +60,7 @@ The project is a Signal Analysis Tool built with Python and Tkinter. It allows u
 
 *   **Purpose:** Defines the data models for the different signal types.
 *   **Key Classes:**
-    *   `SineModel`, `CosineModel`, `SquareModel`, `ChirpModel`, `SineVaryingFreqModel`: These dataclasses define the parameters and generation logic for each signal type.
+    *   `SineModel`, `CosineModel`, `SquareModel`, `ChirpModel`, `SineVaryingFreqModel`: These dataclasses define the parameters and generation logic for each signal type. Time windowing is supported via start and end times inherited from base classes.
 
 ### `models/anomaly_models.py`
 
@@ -83,10 +91,18 @@ The project is a Signal Analysis Tool built with Python and Tkinter. It allows u
 
 *   **Purpose:** Manages the UI for the component pipeline.
 *   **Key Components:**
-    *   `PipelineListPanel`: A class that creates and manages the listbox for the execution pipeline, allowing users to add, remove, and reorder components.
+    *   `PipelineListPanel`: A class that creates and manages the listbox for the execution pipeline, allowing users to add, remove, and reorder components. Also provides a Settings button and double-click binding to trigger the settings popup.
 
 ### `ui_settings_panel.py`
 
 *   **Purpose:** Manages the UI for the global settings.
 *   **Key Components:**
     *   `SettingsPanel`: A class that creates and manages the UI for global time settings, STFT settings, and spectral flux settings.
+
+### `ui_settings_popup.py`
+
+*   **Purpose:** Encapsulates the logic for the component settings popup window.
+*   **Key Features:**
+    *   Creates a modal `Toplevel` window to adjust component settings.
+    *   Features dynamic sizing and centering.
+    *   Contains a live preview Matplotlib canvas that updates parameter changes in real-time.

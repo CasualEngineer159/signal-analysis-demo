@@ -20,7 +20,9 @@
             "params": {
                 "amplitude": 1.0,
                 "frequency": 10.0,
-                "phase": 0.0
+                "phase": 0.0,
+                "start_time": 0.0,
+                "end_time": 5.0
             }
         },
         {
@@ -29,7 +31,9 @@
             "params": {
                 "amplitude": 0.5,
                 "frequency": 20.0,
-                "phase": 0.0
+                "phase": 0.0,
+                "start_time": 0.0,
+                "end_time": 5.0
             }
         },
         {
@@ -39,7 +43,9 @@
                 "amplitude": 0.5,
                 "frequency": 5.0,
                 "phase": 0.0,
-                "duty_cycle": 0.5
+                "duty_cycle": 0.5,
+                "start_time": 0.0,
+                "end_time": 5.0
             }
         },
         {
@@ -48,7 +54,9 @@
             "params": {
                 "amplitude": 0.5,
                 "start_freq": 5.0,
-                "end_freq": 25.0
+                "end_freq": 25.0,
+                "start_time": 0.0,
+                "end_time": 5.0
             }
         },
         {
@@ -58,7 +66,9 @@
                 "amplitude": 1.0,
                 "start_freq": 30.0,
                 "end_freq": 60.0,
-                "change_time": 1.0
+                "change_time": 1.0,
+                "start_time": 0.0,
+                "end_time": 5.0
             }
         },
         {
