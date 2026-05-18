@@ -1,33 +1,35 @@
 {
     "ui_settings": {
+        "periods": 5.0,
         "duration_seconds": 4.0,
-        "stft_window_size": 512,
+        "stft_window_size": 256,
         "stft_overlap_percent": 50.0,
-        "stft_window_type": "hann"
+        "stft_window_type": "hann",
+        "show_peaks": false
     },
     "components": [
+        {
+            "type": "White Noise",
+            "params": {
+                "amplitude": 2.0,
+                "seed": 12345
+            }
+        },
         {
             "type": "Sine",
             "params": {
                 "start_time": 0.0,
                 "end_time": -1.0,
-                "amplitude": 0.5,
+                "amplitude": 0.1,
                 "frequency": 80.0,
                 "phase": 0.0
-            }
-        },
-        {
-            "type": "Gaussian Noise",
-            "params": {
-                "std_dev": 1.5,
-                "seed": 42
             }
         },
         {
             "type": "Signal Dropout",
             "params": {
                 "start_time": 2.0,
-                "duration": 0.2
+                "duration": 0.02
             }
         }
     ],
