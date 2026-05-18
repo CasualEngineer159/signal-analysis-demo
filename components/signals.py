@@ -1,7 +1,7 @@
 import tkinter as tk
 from .base import ComponentController
-from utils import create_slider_entry
-from models.signal_models import SineModel, CosineModel, SquareModel, ChirpModel, SineVaryingFreqModel
+from core.utils import create_slider_entry
+from models.signal_models import SineModel, SquareModel, ChirpModel, SineVaryingFreqModel
 
 class SineController(ComponentController):
     def __init__(self, model: SineModel, update_callback, get_duration):

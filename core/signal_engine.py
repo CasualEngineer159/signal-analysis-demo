@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass, field
-from analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection, find_fft_peaks, get_matched_pairs
+from .analysis import perform_stft, calculate_spectral_flux, perform_fft, evaluate_detection, find_fft_peaks, get_matched_pairs
 
 @dataclass
 class PipelineResult:

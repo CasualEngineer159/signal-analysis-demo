@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection, get_matched_pairs
+from core.analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection, get_matched_pairs
 
 class TestAnalysisFunctions(unittest.TestCase):
     """Unit tests for the signal analysis functions."""

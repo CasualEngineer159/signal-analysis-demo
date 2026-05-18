@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 import csv
+import os
 from tkinter import filedialog, messagebox
-from utils import create_slider_entry
+from core.utils import create_slider_entry
 
 class SettingsPanel:
     def __init__(self, parent, on_params_changed, get_last_flux_data, on_debug_signal=None):
@@ -20,6 +21,11 @@ class SettingsPanel:
         self.stft_overlap_widget = None
 
         self.spectral_flux_rectify = tk.BooleanVar(value=False)
+        
+        # Determine the data directory for exporting CSVs
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.data_dir = os.path.join(base_dir, "data")
+        os.makedirs(self.data_dir, exist_ok=True)
 
         self.setup_time_settings_panel(parent)
         ttk.Separator(parent, orient='horizontal').pack(fill='x', pady=10)
@@ -111,7 +117,11 @@ class SettingsPanel:
             
         t_stft_core, flux = last_flux_data
         
-        filepath = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        filepath = filedialog.asksaveasfilename(
+            initialdir=self.data_dir,
+            defaultextension=".csv", 
+            filetypes=[("CSV files", "*.csv")]
+        )
         if not filepath:
             return
             

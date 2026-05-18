@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 
-from utils import ScrollableFrame
+from core.utils import ScrollableFrame
 
 class PlotManager:
     def __init__(self, parent_frame):

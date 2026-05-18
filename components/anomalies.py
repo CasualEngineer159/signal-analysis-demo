@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import numpy as np
 from .base import ComponentController
-from utils import create_slider_entry
+from core.utils import create_slider_entry
 from models.anomaly_models import (GaussianNoiseModel, ImpulseNoiseModel, AmplitudeJumpModel, 
                                  BiasModel, DriftModel, DropoutModel, SaturationModel, 
                                  OutlierModel, TimeDelayModel)

@@ -6,6 +6,46 @@ This file provides a summary of the project structure and the contents of each f
 
 The project is a Signal Analysis Tool built with Python and Tkinter. It allows users to generate signals, add anomalies, and perform analysis such as FFT and STFT. The application is structured into several modules, including a main application file, utility functions, analysis functions, component controllers, data models, and UI panels.
 
+## Project File Structure
+
+```
+SS-SEMESTRALKA/
+├── components/
+│   ├── anomalies.py
+│   ├── base.py
+│   └── signals.py
+├── configs/
+│   ├── adding_ex.json
+│   ├── ai_prompt_guideline.json
+│   └── demo_stft.json
+├── core/
+│   ├── analysis.py
+│   ├── config_manager.py
+│   ├── plot_manager.py
+│   ├── signal_engine.py
+│   └── utils.py
+├── data/
+│   ├── data.csv
+│   └── test.csv
+├── docs/
+│   ├── ai_prompt_helper.md
+│   ├── project_specifications.txt
+│   └── zadani.pdf
+├── models/
+│   ├── anomaly_models.py
+│   ├── base_model.py
+│   └── signal_models.py
+├── tests/
+│   ├── test_analysis.py
+│   ├── test_models.py
+│   └── test_signal_engine.py
+├── ui/
+│   ├── ui_pipeline_list.py
+│   ├── ui_settings_panel.py
+│   └── ui_settings_popup.py
+└── main.py
+```
+
 ## File Summaries
 
 ### `main.py`

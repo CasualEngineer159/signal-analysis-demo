@@ -1,9 +1,9 @@
-import numpy as np
 import tkinter as tk
+import os
 from tkinter import ttk, filedialog, messagebox
 import matplotlib.pyplot as plt
 
-from utils import ScrollableFrame
+from core.utils import ScrollableFrame
 from components.signals import (SineController, CosineController, SquareController, 
                               ChirpController, SineVaryingFreqController)
 from components.anomalies import (GaussianNoiseController, ImpulseNoiseController, 
@@ -12,12 +12,12 @@ from components.anomalies import (GaussianNoiseController, ImpulseNoiseControlle
                                 TimeDelayController)
 from models.signal_models import *
 from models.anomaly_models import *
-from plot_manager import PlotManager
-from config_manager import ConfigManager
-from signal_engine import generate_pipeline_data
-from ui_pipeline_list import PipelineListPanel
-from ui_settings_panel import SettingsPanel
-from ui_settings_popup import SettingsPopup
+from core.plot_manager import PlotManager
+from core.config_manager import ConfigManager
+from core.signal_engine import generate_pipeline_data
+from ui.ui_pipeline_list import PipelineListPanel
+from ui.ui_settings_panel import SettingsPanel
+from ui.ui_settings_popup import SettingsPopup
 
 # --- Component Mappings ---
 COMPONENT_MAP = {
@@ -50,6 +50,8 @@ class SignalGeneratorApp:
         self._last_flux_data = None
         self._last_pipeline_result = None
         self.settings_popup_instance = None
+        self.configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
+        os.makedirs(self.configs_dir, exist_ok=True)
 
         main_frame = ttk.Frame(root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -146,7 +148,11 @@ class SignalGeneratorApp:
         self.update_plot()
 
     def save_configuration(self):
-        filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+        filepath = filedialog.asksaveasfilename(
+            initialdir=self.configs_dir,
+            defaultextension=".json", 
+            filetypes=[("JSON files", "*.json")]
+        )
         if not filepath: return
         try:
             ui_settings, spectral_flux_settings = self.settings_panel.get_settings()
@@ -156,7 +162,10 @@ class SignalGeneratorApp:
             messagebox.showerror("Save Error", f"Failed to save configuration file:\n{e}")
 
     def load_configuration(self):
-        filepath = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+        filepath = filedialog.askopenfilename(
+            initialdir=self.configs_dir,
+            filetypes=[("JSON files", "*.json")]
+        )
         if not filepath: return
         try:
             ui_settings, components, spectral_flux_settings = ConfigManager.load_from_file(filepath)
