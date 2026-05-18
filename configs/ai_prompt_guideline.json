@@ -80,6 +80,14 @@
             }
         },
         {
+            "//": "Adds random noise from a Uniform distribution.",
+            "type": "White Noise",
+            "params": {
+                "amplitude": 0.1,
+                "seed": 42
+            }
+        },
+        {
             "//": "Adds a single, sharp spike (impulse) to the signal.",
             "type": "Impulse Noise",
             "params": {

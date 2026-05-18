@@ -137,6 +137,33 @@ class TestSignalModel(unittest.TestCase):
 
         self._test_serialization_roundtrip(model)
 
+    def test_white_noise_model(self):
+        amplitude = 0.5
+        model = WhiteNoiseModel(amplitude=amplitude, seed=42)
+        y_out1 = model.generate(self.t_nominal, self.y_in)
+
+        # Verify noise is added
+        self.assertFalse(np.allclose(self.y_in, y_out1))
+        self.assertEqual(y_out1.shape, self.t_nominal.shape)
+
+        # Verify values are within amplitude bounds
+        self.assertTrue(np.all((y_out1 >= -amplitude) & (y_out1 <= amplitude)))
+
+        # Verify deterministic behavior with same seed
+        model_same_seed = WhiteNoiseModel(amplitude=amplitude, seed=42)
+        y_out2 = model_same_seed.generate(self.t_nominal, self.y_in)
+        np.testing.assert_array_equal(y_out1, y_out2)
+
+        # Verify different behavior with different seed
+        model_diff_seed = WhiteNoiseModel(amplitude=amplitude, seed=100)
+        y_out3 = model_diff_seed.generate(self.t_nominal, self.y_in)
+        self.assertFalse(np.allclose(y_out1, y_out3))
+
+        self.assertEqual(model.get_anomaly_times(), [])
+
+        self._test_serialization_roundtrip(model)
+
+
     def test_impulse_noise_model(self):
         amplitude = 10.0
         impulse_time = 1.0

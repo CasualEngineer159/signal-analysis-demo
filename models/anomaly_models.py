@@ -15,6 +15,19 @@ class GaussianNoiseModel(AnomalyComponentModel):
         return y_in + rng.normal(0, self.std_dev, len(t))
 
 @dataclass
+class WhiteNoiseModel(AnomalyComponentModel):
+    """Model for White noise."""
+    name: str = field(default="White Noise", init=False)
+    amplitude: float = 0.1
+    seed: int = 12345
+
+    def _apply_anomaly(self, t: np.ndarray, y_in: np.ndarray) -> np.ndarray:
+        if self.amplitude <= 0: return y_in
+        rng = np.random.RandomState(self.seed)
+        # White noise has uniform distribution between -amplitude and +amplitude
+        return y_in + rng.uniform(-self.amplitude, self.amplitude, len(t))
+
+@dataclass
 class ImpulseNoiseModel(AnomalyComponentModel):
     """Model for impulse noise."""
     name: str = field(default="Impulse Noise", init=False)

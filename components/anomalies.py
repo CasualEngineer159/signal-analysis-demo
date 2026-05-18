@@ -3,7 +3,7 @@ from tkinter import ttk
 import numpy as np
 from .base import ComponentController
 from core.utils import create_slider_entry
-from models.anomaly_models import (GaussianNoiseModel, ImpulseNoiseModel, AmplitudeJumpModel, 
+from models.anomaly_models import (GaussianNoiseModel, WhiteNoiseModel, ImpulseNoiseModel, AmplitudeJumpModel, 
                                  BiasModel, DriftModel, DropoutModel, SaturationModel, 
                                  OutlierModel, TimeDelayModel)
 
@@ -32,6 +32,33 @@ class GaussianNoiseController(ComponentController):
     def regenerate_seed(self):
         self.vars['seed'].set(np.random.randint(0, 10000))
         self.update_model_from_vars()
+
+class WhiteNoiseController(ComponentController):
+    def __init__(self, model: WhiteNoiseModel, update_callback, get_duration):
+        super().__init__(model, update_callback, get_duration)
+
+    def get_config_frame(self, parent):
+        super().get_config_frame(parent)
+        self.vars['amplitude'] = tk.DoubleVar(value=self.model.amplitude)
+        self.vars['seed'] = tk.IntVar(value=self.model.seed)
+
+        create_slider_entry(parent, "Amplitude:", self.vars['amplitude'], 0, 2, self.update_model_from_vars)
+        
+        seed_frame = ttk.Frame(parent)
+        seed_frame.pack(fill=tk.X, pady=5, padx=5)
+        ttk.Label(seed_frame, text="Seed:").pack(side=tk.LEFT, anchor=tk.W)
+        
+        seed_entry = ttk.Entry(seed_frame, textvariable=self.vars['seed'], width=10)
+        seed_entry.pack(side=tk.LEFT, padx=(5,0), expand=True, fill=tk.X)
+        seed_entry.bind("<Return>", lambda e: self.update_model_from_vars())
+
+        regenerate_btn = ttk.Button(seed_frame, text="Regenerate", command=self.regenerate_seed)
+        regenerate_btn.pack(side=tk.RIGHT, padx=(5,0))
+
+    def regenerate_seed(self):
+        self.vars['seed'].set(np.random.randint(0, 10000))
+        self.update_model_from_vars()
+
 
 class ImpulseNoiseController(ComponentController):
     def __init__(self, model: ImpulseNoiseModel, update_callback, get_duration):

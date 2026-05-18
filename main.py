@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from core.utils import ScrollableFrame
 from components.signals import (SineController, CosineController, SquareController, 
                               ChirpController, SineVaryingFreqController)
-from components.anomalies import (GaussianNoiseController, ImpulseNoiseController, 
+from components.anomalies import (GaussianNoiseController, WhiteNoiseController, ImpulseNoiseController, 
                                 AmplitudeJumpController, BiasController, DriftController,
                                 DropoutController, SaturationController, OutlierController,
                                 TimeDelayController)
@@ -27,6 +27,7 @@ COMPONENT_MAP = {
     "Square": (SquareModel, SquareController),
     "Chirp": (ChirpModel, ChirpController),
     "Gaussian Noise": (GaussianNoiseModel, GaussianNoiseController),
+    "White Noise": (WhiteNoiseModel, WhiteNoiseController),
     "Amplitude Jump": (AmplitudeJumpModel, AmplitudeJumpController),
     "Impulse Noise": (ImpulseNoiseModel, ImpulseNoiseController),
     "Outlier": (OutlierModel, OutlierController),

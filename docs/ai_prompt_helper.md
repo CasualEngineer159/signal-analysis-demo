@@ -94,7 +94,7 @@ SS-SEMESTRALKA/
 
 *   **Purpose:** Defines the UI controllers for the various signal anomalies.
 *   **Key Classes:**
-    *   `GaussianNoiseController`, `ImpulseNoiseController`, `AmplitudeJumpController`, `BiasController`, `DriftController`, `DropoutController`, `SaturationController`, `OutlierController`, `TimeDelayController`: These classes create the UI for configuring the parameters of the anomaly models.
+    *   `GaussianNoiseController`, `WhiteNoiseController`, `ImpulseNoiseController`, `AmplitudeJumpController`, `BiasController`, `DriftController`, `DropoutController`, `SaturationController`, `OutlierController`, `TimeDelayController`: These classes create the UI for configuring the parameters of the anomaly models.
 
 ### `models/signal_models.py`
 
@@ -106,7 +106,7 @@ SS-SEMESTRALKA/
 
 *   **Purpose:** Defines the data models for the different anomaly types.
 *   **Key Classes:**
-    *   `GaussianNoiseModel`, `ImpulseNoiseModel`, `AmplitudeJumpModel`, `BiasModel`, `DriftModel`, `DropoutModel`, `SaturationModel`, `OutlierModel`, `TimeDelayModel`: These dataclasses define the parameters and application logic for each anomaly.
+    *   `GaussianNoiseModel`, `WhiteNoiseModel`, `ImpulseNoiseModel`, `AmplitudeJumpModel`, `BiasModel`, `DriftModel`, `DropoutModel`, `SaturationModel`, `OutlierModel`, `TimeDelayModel`: These dataclasses define the parameters and application logic for each anomaly.
 
 ### `plot_manager.py`
 
