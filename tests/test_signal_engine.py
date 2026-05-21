@@ -9,15 +9,24 @@ from core.signal_engine import generate_pipeline_data
 from models.signal_models import SineModel
 
 class MockController:
-    """A simple mock controller to pass into the pipeline engine without UI dependencies."""
+    """
+    A simple mock controller to pass into the pipeline engine without UI dependencies.
+
+    Args:
+        model: The model for the mock controller.
+    """
     def __init__(self, model):
         self.model = model
 
 class TestSignalEngine(unittest.TestCase):
-    """Unit tests for the signal engine pipeline."""
+    """
+    Unit tests for the signal engine pipeline.
+    """
 
     def test_generate_pipeline_data_padding_logic(self):
-        """Test that the padding logic and time array cropping works perfectly."""
+        """
+        Test that the padding logic and time array cropping works perfectly.
+        """
         # Parameters
         duration = 2.0
         max_freq = 10.0

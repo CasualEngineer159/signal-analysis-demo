@@ -9,17 +9,23 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.analysis import perform_fft, perform_stft, calculate_spectral_flux, evaluate_detection, get_matched_pairs
 
 class TestAnalysisFunctions(unittest.TestCase):
-    """Unit tests for the signal analysis functions."""
+    """
+    Unit tests for the signal analysis functions.
+    """
 
     def setUp(self):
-        """Set up common parameters for the tests."""
+        """
+        Set up common parameters for the tests.
+        """
         self.fs = 1000  # Sampling frequency of 1 kHz
         self.duration = 2
         self.t = np.linspace(0, self.duration, self.duration * self.fs, endpoint=False)
         self.y_empty = np.array([])
 
     def test_fft_nominal(self):
-        """Test FFT with a simple sine wave."""
+        """
+        Test FFT with a simple sine wave.
+        """
         test_freq = 50  # 50 Hz
         y_signal = np.sin(2 * np.pi * test_freq * self.t)
         
@@ -35,13 +41,17 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertAlmostEqual(xf[peak_freq_index], test_freq, delta=1.0)
 
     def test_fft_edge_case_empty(self):
-        """Test FFT with an empty input array."""
+        """
+        Test FFT with an empty input array.
+        """
         xf, yf = perform_fft(self.y_empty, self.fs)
         self.assertEqual(len(xf), 0)
         self.assertEqual(len(yf), 0)
 
     def test_stft_nominal(self):
-        """Test STFT with a simple sine wave."""
+        """
+        Test STFT with a simple sine wave.
+        """
         y_signal = np.sin(2 * np.pi * 50 * self.t)
         nperseg = 256
         noverlap = 128
@@ -58,14 +68,18 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(Zxx.shape[1], t.shape[0])
 
     def test_stft_edge_case_empty(self):
-        """Test STFT with an empty input array."""
+        """
+        Test STFT with an empty input array.
+        """
         f, t, Zxx = perform_stft(self.y_empty, self.fs, 'hann', 256, 128)
         self.assertEqual(len(f), 0)
         self.assertEqual(len(t), 0)
         self.assertEqual(Zxx.size, 0)
 
     def test_stft_edge_case_window_too_large(self):
-        """Test STFT when nperseg is larger than the signal length."""
+        """
+        Test STFT when nperseg is larger than the signal length.
+        """
         y_short = self.t[:100] # Signal of length 100
         nperseg = 256 # Window larger than signal
         
@@ -78,7 +92,9 @@ class TestAnalysisFunctions(unittest.TestCase):
             self.fail(f"STFT raised an exception with a large window: {e}")
 
     def test_spectral_flux_nominal(self):
-        """Test calculate_spectral_flux with a distinct anomaly (peak)."""
+        """
+        Test calculate_spectral_flux with a distinct anomaly (peak).
+        """
         # Create a mock STFT magnitude matrix (frequencies x time)
         # Background noise level of 1.0
         Zxx = np.ones((10, 20))
@@ -99,7 +115,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(peak_times[0], t_stft[10])
 
     def test_spectral_flux_edge_case_empty(self):
-        """Test calculate_spectral_flux with empty arrays."""
+        """
+        Test calculate_spectral_flux with empty arrays.
+        """
         Zxx_empty = np.array([[]])
         t_empty = np.array([])
         
@@ -109,7 +127,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(len(peak_times), 0)
 
     def test_spectral_flux_edge_case_uniform(self):
-        """Test calculate_spectral_flux with a perfectly uniform matrix to test the MAD fallback logic."""
+        """
+        Test calculate_spectral_flux with a perfectly uniform matrix to test the MAD fallback logic.
+        """
         # A perfectly clean/flat signal yields a uniform matrix
         Zxx_uniform = np.full((10, 20), 5.0)
         t_stft = np.linspace(0, 1.0, 20)
@@ -125,6 +145,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(len(peak_times), 0)
 
     def test_evaluate_detection_perfect_match(self):
+        """
+        Test evaluate_detection with a perfect match.
+        """
         gt = [1.0, 2.0, 3.0]
         pred = [1.0, 2.05, 2.95]
         res = evaluate_detection(gt, pred, tolerance=0.1)
@@ -136,6 +159,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(res['F1-Score'], 1.0)
 
     def test_evaluate_detection_false_positives(self):
+        """
+        Test evaluate_detection with false positives.
+        """
         gt = [1.0]
         pred = [1.0, 2.0, 3.0]
         res = evaluate_detection(gt, pred, tolerance=0.1)
@@ -146,6 +172,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(res['Recall'], 1.0)
 
     def test_evaluate_detection_false_negatives(self):
+        """
+        Test evaluate_detection with false negatives.
+        """
         gt = [1.0, 2.0, 3.0]
         pred = [2.0]
         res = evaluate_detection(gt, pred, tolerance=0.1)
@@ -156,6 +185,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertAlmostEqual(res['Recall'], 1/3)
 
     def test_evaluate_detection_tolerance(self):
+        """
+        Test evaluate_detection with different tolerances.
+        """
         gt = [1.0]
         # Prediction is outside the 0.1 tolerance
         pred = [1.2]
@@ -171,6 +203,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(res_large_tol['FN'], 0)
 
     def test_evaluate_detection_empty_inputs(self):
+        """
+        Test evaluate_detection with empty inputs.
+        """
         # Empty predictions
         res1 = evaluate_detection([1.0], [])
         self.assertEqual(res1['TP'], 0)
@@ -191,7 +226,9 @@ class TestAnalysisFunctions(unittest.TestCase):
         self.assertEqual(res3['F1-Score'], 0.0)
 
     def test_get_matched_pairs(self):
-        """Test the get_matched_pairs function with various scenarios."""
+        """
+        Test the get_matched_pairs function with various scenarios.
+        """
         
         # Scenario 1: Perfect one-to-one match
         gt1 = [1.0, 2.0]

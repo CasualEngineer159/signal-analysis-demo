@@ -2,6 +2,18 @@ import tkinter as tk
 from tkinter import ttk
 
 class PipelineListPanel:
+    """
+    Manages the UI for the component pipeline.
+
+    Args:
+        parent: The parent widget.
+        controllers (list): The list of component controllers.
+        on_pipeline_changed (callable): The callback function for when the pipeline changes.
+        on_open_settings (callable): The callback function for when the settings are opened.
+        component_map (dict): A dictionary mapping component names to their classes.
+        signal_types (list): A list of signal types.
+        on_add_component (callable): The callback function for when a component is added.
+    """
     def __init__(self, parent, controllers, on_pipeline_changed, on_open_settings, component_map, signal_types, on_add_component):
         self.controllers = controllers
         self.on_pipeline_changed = on_pipeline_changed
@@ -16,6 +28,12 @@ class PipelineListPanel:
         self.setup_component_panels(parent)
 
     def setup_component_panels(self, parent):
+        """
+        Sets up the component panels.
+
+        Args:
+            parent: The parent widget.
+        """
         # Execution Pipeline
         pipeline_frame = ttk.LabelFrame(parent, text="Execution Pipeline")
         pipeline_frame.pack(fill=tk.X, pady=(10, 5))
@@ -60,18 +78,33 @@ class PipelineListPanel:
         ttk.Button(anom_btn_frame, text="Add", command=lambda: self.on_add_component(anom_var.get())).pack(side=tk.LEFT, padx=(5,0))
 
     def open_settings_popup(self, event=None):
-        """Calls the callback to open the settings window if an item is selected."""
+        """
+        Calls the callback to open the settings window if an item is selected.
+
+        Args:
+            event: The event that triggered the call.
+        """
         if self.pipeline_listbox.curselection():
             self.on_open_settings()
 
     def on_drag_start(self, event):
-        """Record the item's starting index."""
+        """
+        Record the item's starting index.
+
+        Args:
+            event: The event that triggered the call.
+        """
         index = self.pipeline_listbox.nearest(event.y)
         if index >= 0:
             self._drag_data["item_index"] = index
 
     def on_drag_motion(self, event):
-        """Move the item visually in the listbox as it is dragged."""
+        """
+        Move the item visually in the listbox as it is dragged.
+
+        Args:
+            event: The event that triggered the call.
+        """
         current_index = self._drag_data["item_index"]
         if current_index is None:
             return
@@ -95,12 +128,20 @@ class PipelineListPanel:
             self._drag_data["item_index"] = new_index
 
     def on_drag_release(self, event):
-        """Finalize drag and trigger an update."""
+        """
+        Finalize drag and trigger an update.
+
+        Args:
+            event: The event that triggered the call.
+        """
         if self._drag_data["item_index"] is not None:
             self._drag_data["item_index"] = None
             self.on_pipeline_changed()
 
     def remove_component(self):
+        """
+        Removes the selected component from the pipeline.
+        """
         idxs = self.pipeline_listbox.curselection()
         if not idxs: return
         idx = idxs[0]
@@ -115,6 +156,9 @@ class PipelineListPanel:
         self.on_pipeline_changed()
 
     def move_component_up(self):
+        """
+        Moves the selected component up in the pipeline.
+        """
         idxs = self.pipeline_listbox.curselection()
         if not idxs: return
         idx = idxs[0]
@@ -130,6 +174,9 @@ class PipelineListPanel:
         self.on_pipeline_changed()
 
     def move_component_down(self):
+        """
+        Moves the selected component down in the pipeline.
+        """
         idxs = self.pipeline_listbox.curselection()
         if not idxs: return
         idx = idxs[0]
@@ -145,7 +192,12 @@ class PipelineListPanel:
         self.on_pipeline_changed()
 
     def on_component_select(self, event=None):
-        """Updates the currently selected controller based on listbox selection."""
+        """
+        Updates the currently selected controller based on listbox selection.
+
+        Args:
+            event: The event that triggered the call.
+        """
         idxs = self.pipeline_listbox.curselection()
         if not idxs:
             self.selected_controller = None
@@ -154,8 +206,17 @@ class PipelineListPanel:
         self.selected_controller = self.controllers[idx]
 
     def add_to_listbox(self, controller):
+        """
+        Adds a controller to the listbox.
+
+        Args:
+            controller: The controller to add.
+        """
         self.pipeline_listbox.insert(tk.END, str(controller))
         
     def clear_listbox(self):
+        """
+        Clears the listbox.
+        """
         self.pipeline_listbox.delete(0, tk.END)
         self.selected_controller = None

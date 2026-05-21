@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class SettingsPopup:
+    """
+    Encapsulates the logic for the component settings popup window.
+
+    Args:
+        parent: The parent widget.
+        controller: The component controller.
+        get_duration_func (callable): A function to get the duration of the signal.
+        on_close_callback (callable): The callback function for when the popup is closed.
+    """
     def __init__(self, parent, controller, get_duration_func, on_close_callback):
         self.parent = parent
         self.controller = controller
@@ -59,6 +68,9 @@ class SettingsPopup:
         self.update_preview() # Initial draw
 
     def update_preview(self):
+        """
+        Updates the component preview plot.
+        """
         # Trigger the main plot update first
         self.original_callback()
 
@@ -86,7 +98,9 @@ class SettingsPopup:
         self.preview_canvas.draw()
 
     def on_close(self):
-        """Restore original callback and destroy the popup."""
+        """
+        Restore original callback and destroy the popup.
+        """
         self.controller.update_callback = self.original_callback
         self.popup.destroy()
         # Notify the main app that the popup is closed

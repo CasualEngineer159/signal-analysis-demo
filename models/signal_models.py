@@ -5,7 +5,14 @@ from .base_model import SignalComponentModel
 
 @dataclass
 class SineModel(SignalComponentModel):
-    """Model for a standard sine wave."""
+    """
+    Model for a standard sine wave.
+
+    Args:
+        amplitude (float): The amplitude of the sine wave.
+        frequency (float): The frequency of the sine wave in Hz.
+        phase (float): The phase of the sine wave in degrees.
+    """
     name: str = field(default="Sine", init=False)
     amplitude: float = 1.0
     frequency: float = 5.0
@@ -22,7 +29,9 @@ class SineModel(SignalComponentModel):
 
 @dataclass
 class CosineModel(SineModel):
-    """Model for a standard cosine wave."""
+    """
+    Model for a standard cosine wave.
+    """
     name: str = field(default="Cosine", init=False)
 
     def _generate_signal(self, t: np.ndarray) -> np.ndarray:
@@ -32,7 +41,15 @@ class CosineModel(SineModel):
 
 @dataclass
 class SquareModel(SignalComponentModel):
-    """Model for a square wave."""
+    """
+    Model for a square wave.
+
+    Args:
+        amplitude (float): The amplitude of the square wave.
+        frequency (float): The frequency of the square wave in Hz.
+        phase (float): The phase of the square wave in degrees.
+        duty_cycle (float): The duty cycle of the square wave (0.0 to 1.0).
+    """
     name: str = field(default="Square", init=False)
     amplitude: float = 1.0
     frequency: float = 5.0
@@ -50,7 +67,15 @@ class SquareModel(SignalComponentModel):
 
 @dataclass
 class ChirpModel(SignalComponentModel):
-    """Model for a chirp signal."""
+    """
+    Model for a chirp signal.
+
+    Args:
+        amplitude (float): The amplitude of the chirp signal.
+        start_freq (float): The starting frequency in Hz.
+        end_freq (float): The ending frequency in Hz.
+        duration (float): The duration of the chirp.
+    """
     name: str = field(default="Chirp", init=False)
     amplitude: float = 1.0
     start_freq: float = 1.0
@@ -80,7 +105,15 @@ class ChirpModel(SignalComponentModel):
 
 @dataclass
 class SineVaryingFreqModel(SignalComponentModel):
-    """Model for a sine wave with a frequency jump."""
+    """
+    Model for a sine wave with a frequency jump.
+
+    Args:
+        amplitude (float): The amplitude of the sine wave.
+        start_freq (float): The starting frequency in Hz.
+        end_freq (float): The ending frequency in Hz.
+        change_time (float): The time at which the frequency changes.
+    """
     name: str = field(default="Sine (Varying Freq)", init=False)
     amplitude: float = 1.0
     start_freq: float = 20.0

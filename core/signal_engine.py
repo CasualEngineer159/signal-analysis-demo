@@ -4,6 +4,9 @@ from .analysis import perform_stft, calculate_spectral_flux, perform_fft, evalua
 
 @dataclass
 class PipelineResult:
+    """
+    A dataclass to store the results of the signal processing pipeline.
+    """
     fs: float
     t: np.ndarray
     y: np.ndarray
@@ -24,7 +27,17 @@ class PipelineResult:
     matched_pairs: list[tuple[float | None, float | None]] = field(default_factory=list)
 
 def _calculate_tolerance(fs, stft_window_size, stft_overlap):
-    """Calculates the detection tolerance based on the STFT hop size."""
+    """
+    Calculates the detection tolerance based on the STFT hop size.
+
+    Args:
+        fs (float): The sampling frequency.
+        stft_window_size (int): The window size for the STFT.
+        stft_overlap (int): The overlap size for the STFT.
+
+    Returns:
+        float: The calculated tolerance.
+    """
     hop_size = stft_window_size - stft_overlap
     # Ensure hop_size is at least 1 to avoid division by zero
     if hop_size <= 0:
@@ -32,6 +45,21 @@ def _calculate_tolerance(fs, stft_window_size, stft_overlap):
     return hop_size / fs
 
 def generate_pipeline_data(controllers, duration, max_freq, stft_window_size, stft_overlap, stft_window_type, rectify=False) -> PipelineResult:
+    """
+    Generates pipeline data by generating the signal, applying anomalies, performing STFT and FFT, calculating spectral flux, and evaluating detection performance.
+
+    Args:
+        controllers (list): The list of component controllers.
+        duration (float): The duration of the signal.
+        max_freq (float): The maximum frequency.
+        stft_window_size (int): The STFT window size.
+        stft_overlap (int): The STFT overlap size.
+        stft_window_type (str): The STFT window type.
+        rectify (bool): Whether to rectify the spectral flux.
+
+    Returns:
+        PipelineResult: The result of the pipeline execution.
+    """
     fs = max(1000, max_freq * 40)
     
     # Calculate padding

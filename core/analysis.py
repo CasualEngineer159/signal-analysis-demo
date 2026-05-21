@@ -7,12 +7,12 @@ def perform_fft(y: np.ndarray, fs: float) -> tuple[np.ndarray, np.ndarray]:
 
     Args:
         y (np.ndarray): The input signal array.
-        fs (float): The sampling frequency of the signal.
+        fs (float): The sampling frequency.
 
     Returns:
         A tuple containing:
-        - The frequency bins (x-axis).
-        - The corresponding amplitudes (y-axis).
+        - xf (np.ndarray): The frequency bins (x-axis).
+        - amplitude (np.ndarray): The corresponding amplitudes (y-axis).
     """
     n = len(y)
     if n == 0:
@@ -28,6 +28,18 @@ def perform_fft(y: np.ndarray, fs: float) -> tuple[np.ndarray, np.ndarray]:
 
 
 def find_fft_peaks(xf: np.ndarray, amplitude: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Finds peaks in the FFT spectrum.
+
+    Args:
+        xf (np.ndarray): The frequency bins (x-axis).
+        amplitude (np.ndarray): The corresponding amplitudes (y-axis).
+
+    Returns:
+        A tuple containing:
+        - peak_freqs (np.ndarray): The frequencies of the detected peaks.
+        - peak_amps (np.ndarray): The amplitudes of the detected peaks.
+    """
     if amplitude.size == 0 or len(xf) == 0:
         return np.array([]), np.array([])
 
@@ -105,8 +117,8 @@ def calculate_spectral_flux(Zxx: np.ndarray, t_stft: np.ndarray, rectify: bool =
 
     Returns:
         A tuple containing:
-        - The 1D flux array.
-        - An array of times in seconds where anomalies (peaks) were detected.
+        - flux (np.ndarray): The 1D flux array.
+        - peak_times (np.ndarray): An array of times in seconds where anomalies (peaks) were detected.
     """
     if Zxx.size == 0 or len(t_stft) == 0:
         return np.array([]), np.array([])
@@ -156,8 +168,8 @@ def get_matched_pairs(ground_truth_times: list[float], predicted_times: list[flo
         tolerance (float): The maximum time difference to consider a match valid.
 
     Returns:
-        A list of tuples, where each tuple is a pair of (ground_truth, predicted) times.
-        If a time is unmatched, its corresponding pair will be None.
+        A list of tuples containing:
+        - A tuple pair of (ground_truth, predicted) times. If a time is unmatched, its corresponding pair will be None.
     """
     # Handle edge cases where one or both lists are empty
     if not ground_truth_times and not predicted_times:
@@ -244,7 +256,13 @@ def evaluate_detection(ground_truth_times: list[float], predicted_times: list[fl
         tolerance (float): The maximum time difference to consider a match valid.
 
     Returns:
-        dict: A dictionary containing TP, FP, FN, Precision, Recall, and F1-Score.
+        A dictionary containing:
+        - TP (int): True positives.
+        - FP (int): False positives.
+        - FN (int): False negatives.
+        - Precision (float): Precision score.
+        - Recall (float): Recall score.
+        - F1-Score (float): F1 score.
     """
     
     # Use the new matching logic to get TP, FP, FN

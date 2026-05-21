@@ -7,6 +7,9 @@ class BaseComponentModel(ABC):
     """
     Abstract base class for a pure, UI-agnostic data model of a signal component.
     It holds parameters as primitive types and contains the core mathematical logic.
+
+    Args:
+        name (str): The name of the component.
     """
     name: str = "Base Component"
 
@@ -28,6 +31,9 @@ class BaseComponentModel(ABC):
         """
         Serializes the model's parameters to a dictionary.
         The `name` field is used to identify the component type.
+
+        Returns:
+            dict: The serialized model parameters.
         """
         params = asdict(self)
         if 'name' in params:
@@ -38,6 +44,12 @@ class BaseComponentModel(ABC):
     def from_dict(cls, config: dict) -> 'BaseComponentModel':
         """
         Creates a model instance from a dictionary configuration.
+
+        Args:
+            config (dict): The configuration dictionary.
+
+        Returns:
+            BaseComponentModel: The created model instance.
         """
         param_config = config.get('params', {})
         known_fields = {f.name for f in fields(cls)}
@@ -45,17 +57,37 @@ class BaseComponentModel(ABC):
         return cls(**filtered_params)
 
     def get_anomaly_times(self) -> list[float]:
-        """Returns a list of specific times where this component introduces an anomaly/change."""
+        """
+        Returns a list of specific times where this component introduces an anomaly/change.
+
+        Returns:
+            list[float]: The list of anomaly times.
+        """
         return []
 
 @dataclass
 class SignalComponentModel(BaseComponentModel):
-    """Base for models that generate a primary signal."""
+    """
+    Base for models that generate a primary signal.
+
+    Args:
+        start_time (float): The start time of the signal component.
+        end_time (float): The end time of the signal component.
+    """
     start_time: float = 0.0
     end_time: float = -1.0  # -1 indicates to the end of the signal
 
     def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
-        """Generates the component's signal and adds it to the input signal within the specified time window."""
+        """
+        Generates the component's signal and adds it to the input signal within the specified time window.
+
+        Args:
+            t (np.ndarray): The time vector.
+            y_in (np.ndarray): The input signal.
+
+        Returns:
+            np.ndarray: The resulting signal.
+        """
         if len(t) == 0:
             return y_in
 
@@ -83,18 +115,54 @@ class SignalComponentModel(BaseComponentModel):
 
     @abstractmethod
     def _generate_signal(self, t: 'np.ndarray') -> 'np.ndarray':
+        """
+        Internal method to generate the signal.
+
+        Args:
+            t (np.ndarray): The time vector.
+
+        Returns:
+            np.ndarray: The generated signal.
+        """
         raise NotImplementedError
 
     def get_max_freq(self) -> float:
-        """Returns the model's maximum frequency content."""
+        """
+        Returns the model's maximum frequency content.
+
+        Returns:
+            float: The maximum frequency.
+        """
         return 0
 
 @dataclass
 class AnomalyComponentModel(BaseComponentModel):
-    """Base for models that modify an incoming signal."""
+    """
+    Base for models that modify an incoming signal.
+    """
     def generate(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        """
+        Applies the anomaly to the input signal.
+
+        Args:
+            t (np.ndarray): The time vector.
+            y_in (np.ndarray): The input signal.
+
+        Returns:
+            np.ndarray: The output signal.
+        """
         return self._apply_anomaly(t, y_in)
 
     @abstractmethod
     def _apply_anomaly(self, t: 'np.ndarray', y_in: 'np.ndarray') -> 'np.ndarray':
+        """
+        Internal method to apply the anomaly.
+
+        Args:
+            t (np.ndarray): The time vector.
+            y_in (np.ndarray): The input signal.
+
+        Returns:
+            np.ndarray: The output signal.
+        """
         raise NotImplementedError

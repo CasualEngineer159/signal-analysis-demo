@@ -7,6 +7,12 @@ import numpy as np
 from core.utils import ScrollableFrame
 
 class PlotManager:
+    """
+    Manages the creation and updating of the various plots and results tables in the UI.
+
+    Args:
+        parent_frame: The parent widget.
+    """
     def __init__(self, parent_frame):
         scrollable_area = ScrollableFrame(parent_frame, h_scroll=True)
         scrollable_area.pack(fill="both", expand=True)
@@ -98,6 +104,35 @@ class PlotManager:
             self.eval_labels[metric] = value_label
 
     def draw_plots(self, duration, max_freq, fs, t, y, t_ext, y_ext, t_stft_ext, f, Zxx_ext, t_stft_core, flux, peak_times, xf, yf, show_peaks, ground_truth_times=None, evaluation_metrics=None, fft_peak_freqs=None, fft_peak_amps=None, matched_pairs=None):
+        """
+        Draws the plots in the UI.
+
+        Args:
+            duration (float): The duration of the signal.
+            max_freq (float): The maximum frequency.
+            fs (float): The sampling frequency.
+            t (np.ndarray): The time array.
+            y (np.ndarray): The signal array.
+            t_ext (np.ndarray): The extended time array.
+            y_ext (np.ndarray): The extended signal array.
+            t_stft_ext (np.ndarray): The extended STFT time array.
+            f (np.ndarray): The frequency array.
+            Zxx_ext (np.ndarray): The STFT magnitude matrix.
+            t_stft_core (np.ndarray): The core STFT time array.
+            flux (np.ndarray): The spectral flux array.
+            peak_times (np.ndarray): The times of the detected peaks.
+            xf (np.ndarray): The frequency bins.
+            yf (np.ndarray): The amplitudes.
+            show_peaks (bool): Whether to show the detected peaks.
+            ground_truth_times (list[float], optional): The ground truth times. Defaults to None.
+            evaluation_metrics (dict, optional): The evaluation metrics. Defaults to None.
+            fft_peak_freqs (np.ndarray, optional): The FFT peak frequencies. Defaults to None.
+            fft_peak_amps (np.ndarray, optional): The FFT peak amplitudes. Defaults to None.
+            matched_pairs (list, optional): The matched pairs. Defaults to None.
+
+        Returns:
+            None
+        """
         self.ax.clear(); self.fft_ax.clear(); self.stft_ax.clear(); self.flux_ax.clear()
 
         # Time-Domain Plot

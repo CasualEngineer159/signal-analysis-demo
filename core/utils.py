@@ -5,6 +5,12 @@ class ScrollableFrame(ttk.Frame):
     """
     A custom ttk.Frame that is scrollable with a mousewheel or a scrollbar.
     Widgets are placed into the `self.scrollable_frame`.
+
+    Args:
+        container: The parent widget.
+        h_scroll (bool): Whether to enable horizontal scrolling.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
     """
     def __init__(self, container, h_scroll=False, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
@@ -51,6 +57,10 @@ class RoundedStringVar(tk.StringVar):
     """
     A custom tkinter StringVar that automatically rounds the displayed value
     to two decimal places when it's not being actively edited by the user.
+
+    Args:
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -67,6 +77,17 @@ class RoundedStringVar(tk.StringVar):
 def create_slider_entry(parent, label, var, from_, to, command):
     """
     Creates a composite widget with a label, a slider, and a text entry.
+
+    Args:
+        parent: The parent widget.
+        label (str): The label text.
+        var (tk.DoubleVar): The variable linked to the slider and entry.
+        from_ (float): The minimum value of the slider.
+        to (float): The maximum value of the slider.
+        command (callable): The function to call when the value changes.
+
+    Returns:
+        A ttk.Frame containing the composite widget.
     """
     frame = ttk.Frame(parent)
     frame.pack(fill=tk.X, pady=5, padx=5)

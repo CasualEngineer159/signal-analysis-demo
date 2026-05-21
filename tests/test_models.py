@@ -11,16 +11,26 @@ from models.signal_models import *
 from models.anomaly_models import *
 
 class TestSignalModel(unittest.TestCase):
-    """Tests for the pure data models of signal components."""
+    """
+    Tests for the pure data models of signal components.
+    """
 
     def setUp(self):
+        """
+        Set up common parameters for the tests.
+        """
         self.t_nominal = np.linspace(0, 2, 2000, endpoint=False)
         self.t_empty = np.array([])
         self.t_single = np.array([0.0])
         self.y_in = np.zeros_like(self.t_nominal)
 
     def _test_serialization_roundtrip(self, model_instance):
-        """Helper to test the to_dict/from_dict round trip for any model."""
+        """
+        Helper to test the to_dict/from_dict round trip for any model.
+
+        Args:
+            model_instance: The model instance to test.
+        """
         model_class = model_instance.__class__
         config = model_instance.to_dict()
         
@@ -32,6 +42,9 @@ class TestSignalModel(unittest.TestCase):
         self.assertEqual(model_instance, recreated_model)
 
     def test_sine_model(self):
+        """
+        Test the SineModel.
+        """
         model = SineModel(frequency=10)
         y_out = model.generate(self.t_nominal, self.y_in)
         self.assertEqual(y_out.shape, self.t_nominal.shape)
@@ -47,6 +60,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_cosine_model(self):
+        """
+        Test the CosineModel.
+        """
         # A cosine wave starting at phase=0 and t=0 should have amplitude 1.0 (max)
         model = CosineModel(frequency=10, amplitude=5.0, phase=0.0)
         y_out = model.generate(self.t_nominal, self.y_in)
@@ -63,6 +79,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_square_model(self):
+        """
+        Test the SquareModel.
+        """
         amplitude = 3.0
         model = SquareModel(frequency=5, amplitude=amplitude, duty_cycle=0.5)
         y_out = model.generate(self.t_nominal, self.y_in)
@@ -83,6 +102,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_chirp_model(self):
+        """
+        Test the ChirpModel.
+        """
         model = ChirpModel(start_freq=10, end_freq=100)
         y_out = model.generate(self.t_nominal, self.y_in)
         self.assertEqual(y_out.shape, self.t_nominal.shape)
@@ -97,6 +119,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_sine_varying_freq_model(self):
+        """
+        Test the SineVaryingFreqModel.
+        """
         change_time = 1.0
         model = SineVaryingFreqModel(start_freq=10, end_freq=50, change_time=change_time)
         y_out = model.generate(self.t_nominal, self.y_in)
@@ -115,6 +140,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_gaussian_noise_model(self):
+        """
+        Test the GaussianNoiseModel.
+        """
         std_dev = 0.5
         model = GaussianNoiseModel(std_dev=std_dev, seed=42)
         y_out1 = model.generate(self.t_nominal, self.y_in)
@@ -138,6 +166,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_white_noise_model(self):
+        """
+        Test the WhiteNoiseModel.
+        """
         amplitude = 0.5
         model = WhiteNoiseModel(amplitude=amplitude, seed=42)
         y_out1 = model.generate(self.t_nominal, self.y_in)
@@ -165,6 +196,9 @@ class TestSignalModel(unittest.TestCase):
 
 
     def test_impulse_noise_model(self):
+        """
+        Test the ImpulseNoiseModel.
+        """
         amplitude = 10.0
         impulse_time = 1.0
         model = ImpulseNoiseModel(amplitude=amplitude, impulse_time=impulse_time)
@@ -185,6 +219,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_outlier_model(self):
+        """
+        Test the OutlierModel.
+        """
         value = 50.0
         outlier_time = 1.0
         model = OutlierModel(value=value, outlier_time=outlier_time)
@@ -205,6 +242,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_amplitude_jump_model(self):
+        """
+        Test the AmplitudeJumpModel.
+        """
         jump_size = 5.0
         jump_time = 1.0
         model = AmplitudeJumpModel(jump_size=jump_size, jump_time=jump_time)
@@ -225,6 +265,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_bias_model(self):
+        """
+        Test the BiasModel.
+        """
         offset = 2.5
         model = BiasModel(offset=offset)
         y_out = model.generate(self.t_nominal, self.y_in)
@@ -237,6 +280,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_drift_model(self):
+        """
+        Test the DriftModel.
+        """
         slope = 1.5
         model = DriftModel(slope=slope)
         y_out = model.generate(self.t_nominal, self.y_in)
@@ -254,6 +300,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_saturation_model(self):
+        """
+        Test the SaturationModel.
+        """
         model = SaturationModel(lower_threshold=-0.5, upper_threshold=0.5)
         y_in_test = np.array([-1.0, -0.2, 0.2, 0.8, 1.5])
         y_out = model.generate(self.t_nominal, y_in_test)
@@ -268,6 +317,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_dropout_model(self):
+        """
+        Test the DropoutModel.
+        """
         # Test the generation logic
         model = DropoutModel(start_time=0.5, duration=0.5)
         y_in_test = np.ones(100)
@@ -295,7 +347,9 @@ class TestSignalModel(unittest.TestCase):
         self._test_serialization_roundtrip(model)
 
     def test_time_delay_model_edge_cases(self):
-        """Test TimeDelayModel with zero-duration or empty time arrays."""
+        """
+        Test TimeDelayModel with zero-duration or empty time arrays.
+        """
         model = TimeDelayModel(delay=0.1)
         y_in = np.ones(10)
         
@@ -322,9 +376,14 @@ class TestSignalModel(unittest.TestCase):
         self.assertEqual(model.get_anomaly_times(), [0.1])
 
 class TestSignalTimeWindowing(unittest.TestCase):
-    """Tests for the start_time and end_time functionality of signal models."""
+    """
+    Tests for the start_time and end_time functionality of signal models.
+    """
 
     def setUp(self):
+        """
+        Set up common parameters for the tests.
+        """
         self.t = np.linspace(0, 4, 4000, endpoint=False)
         self.y_in = np.zeros_like(self.t)
         self.start_time = 1.0
@@ -333,7 +392,12 @@ class TestSignalTimeWindowing(unittest.TestCase):
         self.end_idx = 3000
 
     def _test_windowing(self, model):
-        """Helper to test that a signal is only active within its window."""
+        """
+        Helper to test that a signal is only active within its window.
+
+        Args:
+            model: The model to test.
+        """
         y_out = model.generate(self.t, self.y_in)
 
         # Signal should be zero before the start time
@@ -344,18 +408,30 @@ class TestSignalTimeWindowing(unittest.TestCase):
         self.assertTrue(np.any(y_out[self.start_idx:self.end_idx] != 0))
 
     def test_sine_windowing(self):
+        """
+        Test windowing for the SineModel.
+        """
         model = SineModel(frequency=10, start_time=self.start_time, end_time=self.end_time)
         self._test_windowing(model)
 
     def test_cosine_windowing(self):
+        """
+        Test windowing for the CosineModel.
+        """
         model = CosineModel(frequency=10, start_time=self.start_time, end_time=self.end_time)
         self._test_windowing(model)
 
     def test_square_windowing(self):
+        """
+        Test windowing for the SquareModel.
+        """
         model = SquareModel(frequency=10, start_time=self.start_time, end_time=self.end_time)
         self._test_windowing(model)
 
     def test_chirp_windowing(self):
+        """
+        Test windowing for the ChirpModel.
+        """
         # Test that the chirp is contained within the window
         model = ChirpModel(start_freq=10, end_freq=100, start_time=self.start_time, end_time=self.end_time)
         self._test_windowing(model)
@@ -373,6 +449,9 @@ class TestSignalTimeWindowing(unittest.TestCase):
         np.testing.assert_array_almost_equal(y_out[self.start_idx:self.end_idx], expected_chirp, decimal=5)
 
     def test_sine_varying_freq_windowing(self):
+        """
+        Test windowing for the SineVaryingFreqModel.
+        """
         change_time_relative = 1.5 # Change time relative to component start
         model = SineVaryingFreqModel(
             start_freq=10, 
@@ -404,6 +483,9 @@ class TestSignalTimeWindowing(unittest.TestCase):
         np.testing.assert_array_almost_equal(y_out[self.start_idx:self.end_idx], expected_y, decimal=5)
 
     def test_sine_varying_freq_anomaly_time(self):
+        """
+        Test the anomaly time for the SineVaryingFreqModel.
+        """
         # Test with no start time (defaults to 0)
         model1 = SineVaryingFreqModel(change_time=1.5)
         self.assertEqual(model1.get_anomaly_times(), [1.5])
@@ -413,7 +495,9 @@ class TestSignalTimeWindowing(unittest.TestCase):
         self.assertEqual(model2.get_anomaly_times(), [11.5])
 
     def test_end_index_problem(self):
-        """Verify that two adjacent signals do not overlap on a single point."""
+        """
+        Verify that two adjacent signals do not overlap on a single point.
+        """
         t = np.linspace(0, 2, 2001) # Use 2001 points for clean indexing
         y = np.zeros_like(t)
 
@@ -445,6 +529,9 @@ class TestIntegration(unittest.TestCase):
     Integration test to verify the chained application of multiple components.
     """
     def test_full_pipeline(self):
+        """
+        Test a full pipeline of signal generation and modification.
+        """
         t = np.linspace(0, 2, 2000)
         y = np.zeros_like(t)
 

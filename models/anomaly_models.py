@@ -4,7 +4,13 @@ from .base_model import AnomalyComponentModel
 
 @dataclass
 class GaussianNoiseModel(AnomalyComponentModel):
-    """Model for Gaussian noise."""
+    """
+    Model for Gaussian noise.
+
+    Args:
+        std_dev (float): The standard deviation of the noise.
+        seed (int): The random seed.
+    """
     name: str = field(default="Gaussian Noise", init=False)
     std_dev: float = 0.1
     seed: int = 12345
@@ -16,7 +22,13 @@ class GaussianNoiseModel(AnomalyComponentModel):
 
 @dataclass
 class WhiteNoiseModel(AnomalyComponentModel):
-    """Model for White noise."""
+    """
+    Model for White noise.
+
+    Args:
+        amplitude (float): The amplitude of the noise.
+        seed (int): The random seed.
+    """
     name: str = field(default="White Noise", init=False)
     amplitude: float = 0.1
     seed: int = 12345
@@ -29,7 +41,13 @@ class WhiteNoiseModel(AnomalyComponentModel):
 
 @dataclass
 class ImpulseNoiseModel(AnomalyComponentModel):
-    """Model for impulse noise."""
+    """
+    Model for impulse noise.
+
+    Args:
+        amplitude (float): The amplitude of the impulse.
+        impulse_time (float): The time of the impulse.
+    """
     name: str = field(default="Impulse Noise", init=False)
     amplitude: float = 5.0
     impulse_time: float = 1.0
@@ -49,7 +67,13 @@ class ImpulseNoiseModel(AnomalyComponentModel):
 
 @dataclass
 class AmplitudeJumpModel(AnomalyComponentModel):
-    """Model for an amplitude jump."""
+    """
+    Model for an amplitude jump.
+
+    Args:
+        jump_size (float): The size of the jump.
+        jump_time (float): The time of the jump.
+    """
     name: str = field(default="Amplitude Jump", init=False)
     jump_size: float = 2.0
     jump_time: float = 1.0
@@ -68,7 +92,12 @@ class AmplitudeJumpModel(AnomalyComponentModel):
 
 @dataclass
 class BiasModel(AnomalyComponentModel):
-    """Model for a DC bias."""
+    """
+    Model for a DC bias.
+
+    Args:
+        offset (float): The bias offset.
+    """
     name: str = field(default="Bias", init=False)
     offset: float = 0.5
 
@@ -77,7 +106,12 @@ class BiasModel(AnomalyComponentModel):
 
 @dataclass
 class DriftModel(AnomalyComponentModel):
-    """Model for a linear drift."""
+    """
+    Model for a linear drift.
+
+    Args:
+        slope (float): The slope of the drift.
+    """
     name: str = field(default="Drift", init=False)
     slope: float = 0.5
 
@@ -86,7 +120,13 @@ class DriftModel(AnomalyComponentModel):
 
 @dataclass
 class DropoutModel(AnomalyComponentModel):
-    """Model for a signal dropout."""
+    """
+    Model for a signal dropout.
+
+    Args:
+        start_time (float): The start time of the dropout.
+        duration (float): The duration of the dropout.
+    """
     name: str = field(default="Signal Dropout", init=False)
     start_time: float = 0.75
     duration: float = 0.5
@@ -106,6 +146,13 @@ class DropoutModel(AnomalyComponentModel):
         """
         Returns the ground truth times for the dropout.
         If the dropout duration is less than the tolerance, only the start time is returned.
+
+        Args:
+            tolerance (float): The detection tolerance.
+            **kwargs: Additional arguments.
+
+        Returns:
+            list[float]: The anomaly times.
         """
         if self.duration > tolerance:
             return [self.start_time, self.start_time + self.duration]
@@ -114,7 +161,13 @@ class DropoutModel(AnomalyComponentModel):
 
 @dataclass
 class SaturationModel(AnomalyComponentModel):
-    """Model for signal saturation."""
+    """
+    Model for signal saturation.
+
+    Args:
+        lower_threshold (float): The lower saturation threshold.
+        upper_threshold (float): The upper saturation threshold.
+    """
     name: str = field(default="Saturation", init=False)
     lower_threshold: float = -1.0
     upper_threshold: float = 1.0
@@ -127,7 +180,13 @@ class SaturationModel(AnomalyComponentModel):
 
 @dataclass
 class OutlierModel(AnomalyComponentModel):
-    """Model for a single outlier."""
+    """
+    Model for a single outlier.
+
+    Args:
+        value (float): The outlier value.
+        outlier_time (float): The time of the outlier.
+    """
     name: str = field(default="Outlier", init=False)
     value: float = 10.0
     outlier_time: float = 1.0
@@ -147,7 +206,12 @@ class OutlierModel(AnomalyComponentModel):
 
 @dataclass
 class TimeDelayModel(AnomalyComponentModel):
-    """Model for a time delay."""
+    """
+    Model for a time delay.
+
+    Args:
+        delay (float): The delay duration.
+    """
     name: str = field(default="Time Delay", init=False)
     delay: float = 0.2
 

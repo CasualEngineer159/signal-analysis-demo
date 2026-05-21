@@ -41,6 +41,12 @@ SIGNAL_TYPES = {k for k, (m, c) in COMPONENT_MAP.items() if issubclass(m, Signal
 
 # --- Main Application Class ---
 class SignalGeneratorApp:
+    """
+    The main application class that initializes the UI and manages the overall application state.
+
+    Args:
+        root: The root Tkinter window.
+    """
     def __init__(self, root):
         self.root = root
         self.root.title("Signal Analysis Tool")
@@ -97,10 +103,19 @@ class SignalGeneratorApp:
         self.update_plot()
 
     def on_closing(self):
+        """
+        Handles the application closing event.
+        """
         self.root.quit()
         self.root.destroy()
 
     def setup_file_io_panel(self, parent):
+        """
+        Sets up the configuration panel.
+
+        Args:
+            parent: The parent widget.
+        """
         io_frame = ttk.LabelFrame(parent, text="Configuration")
         io_frame.pack(fill=tk.X, pady=(10, 5))
         btn_frame = ttk.Frame(io_frame)
@@ -110,6 +125,9 @@ class SignalGeneratorApp:
         ttk.Button(btn_frame, text="Load Config", command=self.load_configuration).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 0))
 
     def open_settings_popup(self):
+        """
+        Opens the settings popup for the selected component.
+        """
         selected_controller = self.pipeline_panel.selected_controller
         if not selected_controller:
             return
@@ -125,10 +143,19 @@ class SignalGeneratorApp:
         )
 
     def on_popup_closed(self):
+        """
+        Handles the settings popup closing event.
+        """
         self.settings_popup_instance = None
         self.update_plot()
 
     def handle_settings_change(self, source=None):
+        """
+        Handles changes in the global settings.
+
+        Args:
+            source (str, optional): The source of the change. Defaults to None.
+        """
         if source == "periods":
             max_freq = self._get_max_freq()
             new_duration = self.settings_panel.periods.get() / max_freq if max_freq > 0 else 2
@@ -140,6 +167,16 @@ class SignalGeneratorApp:
         self.update_plot()
 
     def add_component(self, comp_name, model_config=None):
+        """
+        Adds a new component to the pipeline.
+
+        Args:
+            comp_name (str): The name of the component to add.
+            model_config (dict, optional): The configuration for the component model. Defaults to None.
+
+        Returns:
+            ComponentController: The added controller.
+        """
         model_class, controller_class = COMPONENT_MAP[comp_name]
         model = model_class.from_dict(model_config) if model_config else model_class()
         controller = controller_class(model, self.update_plot, lambda: self.settings_panel.duration_seconds.get())
@@ -149,12 +186,18 @@ class SignalGeneratorApp:
         return controller
 
     def clear_all(self):
+        """
+        Clears all components from the pipeline.
+        """
         self.controllers.clear()
         self.pipeline_panel.clear_listbox()
         self.settings_panel.apply_settings({}, {})
         self.update_plot()
 
     def save_configuration(self):
+        """
+        Saves the current configuration to a file.
+        """
         filepath = filedialog.asksaveasfilename(
             initialdir=self.configs_dir,
             defaultextension=".json", 
@@ -169,6 +212,9 @@ class SignalGeneratorApp:
             messagebox.showerror("Save Error", f"Failed to save configuration file:\n{e}")
 
     def load_configuration(self):
+        """
+        Loads a configuration from a file.
+        """
         filepath = filedialog.askopenfilename(
             initialdir=self.configs_dir,
             filetypes=[("JSON files", "*.json")]
@@ -187,11 +233,20 @@ class SignalGeneratorApp:
             messagebox.showerror("Load Error", f"Failed to load or parse configuration file:\n{e}")
 
     def _get_max_freq(self):
+        """
+        Gets the maximum frequency among all signal components.
+
+        Returns:
+            float: The maximum frequency.
+        """
         signal_models = [c.model for c in self.controllers if isinstance(c.model, SignalComponentModel)]
         signal_freqs = [m.get_max_freq() for m in signal_models if m.get_max_freq() > 0]
         return max(signal_freqs) if signal_freqs else 1.0
 
     def show_debug_signal(self):
+        """
+        Shows a debug window with the generated signals.
+        """
         # Regenerate data every time the button is pressed
         duration = self.settings_panel.duration_seconds.get()
         max_freq = self._get_max_freq()
@@ -273,6 +328,12 @@ class SignalGeneratorApp:
         plt.show()
 
     def update_plot(self, event=None):
+        """
+        Updates the main plots.
+
+        Args:
+            event: The event that triggered the call.
+        """
         if not hasattr(self, 'settings_panel'):
             return
 
